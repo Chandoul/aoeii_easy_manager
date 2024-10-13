@@ -9,4 +9,4 @@
 
 ### 2 - Game creating and reparing:
 ![Tux, the Linux mascot](https://github.com/Chandoul/aoeii_easy_manager/blob/main/app/Game.png?raw=true)
-- This tool can help you downloading or reparing your game.
+- This tool can help you to download or repair your game.
