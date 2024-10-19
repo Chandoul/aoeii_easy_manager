@@ -40,19 +40,12 @@ CreateGame() {
 	}
 	Location := Trim(Location, '\')
 	Location .= '\Age of Empires II'
-	PB.Opt('Range1-14')
+	PB.Opt('Range1-12')
 	If DirExist(Location) {
 		If 'Yes' != MsgBox('The game folder already created at this location!`nOverwrite?', 'Info', 0x30 + 0x4) {
 			Return
 		}
 	}
-	PB.Value += 1
-	PBT.Text := 'Getting 7zip...'
-	If !FileExist(EXE) {
-		Download(ZIP, EXE)
-	}
-	PBT.Text := 'Got 7zip'
-	PB.Value += 1
 	For Each, Parts in AOE_II {
 		Loop Parts[2] {
 			SplitPath(Parts[1] A_Index, &OutFileName)
@@ -84,13 +77,7 @@ RepairGame() {
 	If !IsValidSelection(&Location) {
 		Return
 	}
-	PB.Opt('Range1-11')
-	PBT.Text := 'Getting 7zip...'
-	If !FileExist(EXE) {
-		Download(ZIP, EXE)
-	}
-	PBT.Text := 'Got 7zip'
-	PB.Value += 1
+	PB.Opt('Range1-10')
 	For Each, Parts in AOE_II {
 		Loop Parts[2] {
 			SplitPath(Parts[1] A_Index, &OutFileName)
