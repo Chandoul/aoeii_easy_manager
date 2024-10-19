@@ -1,0 +1,1 @@
+RunWait('app\7za.exe a -mx9 data\Base.7z app\*.*')

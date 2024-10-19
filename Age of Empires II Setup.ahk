@@ -1,12 +1,9 @@
 #Requires AutoHotkey v2
 #SingleInstance Force
 
-AOK 	:= ["https://github.com/SmileAoE/aoeii_aio/raw/refs/heads/main/DB/003.7z.00", 4]
-AOC 	:= ["https://github.com/SmileAoE/aoeii_aio/raw/refs/heads/main/DB/004.7z.00", 3]
-FE 		:= ["https://github.com/SmileAoE/aoeii_aio/raw/refs/heads/main/DB/005.7z.00", 1]
-AOE_II 	:= [AOK, AOC, FE]
-ZIP 	:= 'https://github.com/SmileAoE/aoeii_aio/raw/refs/heads/main/DB/7za.exe'
-EXE 	:= A_Temp '\7za.exe'
+AOE_II 	:= 'https://media.githubusercontent.com/media/Chandoul/aoeii_easy_manager/refs/heads/main/data/Age%20of%20Empires%20II.7z?download=true'
+APP 	:= 'https://github.com/SmileAoE/aoeii_aio/raw/refs/heads/main/DB/7za.exe'
+EXE 	:= 'app\7za.exe'
 Game := Gui(, 'Age of Empires II Setup')
 Game.OnEvent('Close', (*) => Quit())
 Quit() {
