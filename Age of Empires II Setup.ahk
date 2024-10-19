@@ -1,6 +1,5 @@
 #Requires AutoHotkey v2
 #SingleInstance Force
-
 APP := 'https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/refs/heads/main/data/Base.7z'
 EXE := '7zr.exe'
 If !DirExist('app') {
@@ -9,14 +8,14 @@ If !DirExist('app') {
 		Download('https://www.7-zip.org/a/7zr.exe', EXE)
 		buf := FileRead('7zr.exe', "RAW")
 		If StrGet(buf, 2, "cp0") !== "MZ" {
-			Msgbox("7zr doesn't seem to be a valid excutable!",, 0x30)
+			Msgbox("7zr doesn't seem to be a valid executable!",, 0x30)
 			buf := ''
 			ExitApp
 		}
 		buf := ''
 		RunWait(EXE ' x Base.7z -aoa',, 'Hide')
 	} Catch As Err {
-		Msgbox(Err.What,, 0x30)
+		Msgbox(Err.What, 'Error occured', 0x30)
 		ExitApp
 	}
 }
@@ -29,114 +28,169 @@ Quit() {
 	}
 	ExitApp()
 }
-Game.BackColor := 'White'
-Game.MarginX := 20
+Game.MarginX := 10
 Game.MarginY := 10
-Game.SetFont('s10 Bold', 'Segoe UI')
-Game.AddButton('w300', '1 - Create').OnEvent('Click', (*) => CreateGame())
+Game.AddTab3('w800 h600', ['Game', 'Patchs/Versions'])
+Gameoff := Game.AddPicture('xm+218 ym+50', 'app\gameoff.png')
+Game.SetFont('s10', 'Segoe UI')
+GameLocation := Game.AddComboBox('w363 Center ReadOnly cBlue')
+GameLocation.OnEvent('Change', (*) => SelectGame(GameLocation.Text))
+AllGameLocation := LoadGameLocation()
+LoadGameLocation() {
+	L := Map()
+	If FileExist('GameLocation') {
+		Loop Read, 'GameLocation' {
+			Location := A_LoopReadLine
+			S := InStr(Location, '>')
+			If !L.Has(Location) && IsValidSelection(&Location) {
+				GameLocation.Add([Location])
+				L[Location] := 0
+				If S {
+					GameLocation.Choose(Location)
+					L[Location] := 1
+					Gameoff.Value := 'app\game.png'
+				}
+			}
+		}
+	}
+	Return L
+}
+Game.SetFont('s14 Bold')
+GameCreateBtn := Game.AddButton('w363', 'Create New')
+UseGDIP()
+CreateImageButton(GameCreateBtn, 0, [['0xFF1F883D',, '0xFFFFFFFF', 5, '0xFF1E793A'], ['0xFF239C46'], ['0xFF28B04F']]*)
+GameCreateBtn.OnEvent('Click', (*) => CreateGame())
 CreateGame() {
 	If !Location := FileSelect('D', 'C:\', 'Select where to create the game folder') {
 		Return
 	}
 	Location := Trim(Location, '\')
 	Location .= '\Age of Empires II'
-	PB.Opt('Range1-12')
+	PB.Opt('Range1-3')
 	If DirExist(Location) {
 		If 'Yes' != MsgBox('The game folder already created at this location!`nOverwrite?', 'Info', 0x30 + 0x4) {
 			Return
 		}
 	}
-	For Each, Parts in AOE_II {
-		Loop Parts[2] {
-			SplitPath(Parts[1] A_Index, &OutFileName)
-			PBT.Text := 'Getting ' OutFileName '...'
-			If !FileExist(A_Temp '\' OutFileName) {
-				Download(Parts[1] A_Index, A_Temp '\' OutFileName)
-			}
-			PBT.Text := 'Got ' OutFileName
-			PB.Value += 1
-		}
-	}
-	For Each, Parts in AOE_II {
-		SplitPath(Parts[1] '1', &OutFileName)
-		PBT.Text := 'Extracting ' OutFileName '...'
-		RunWait(EXE ' x "' A_Temp '\' OutFileName '" -o"' Location '" -aoa',, 'Hide')
-		PB.Value += 1
-	}
+	PBT.Text := 'Downloading "Age of Empires II.7z"...'
+	If !FileExist('data\Age of Empires II.7z')
+		DownloadA(AOE_II, 'data\Age of Empires II.7z')
+	PB.Value += 1
+	PBT.Text := 'Decompressing "Age of Empires II.7z"...'
+	RunWait(EXE ' x "data\Age of Empires II.7z" -o"' Location '" -aoa',, 'Hide')
+	PBT.Text := 'Game creation completed!'
+	PB.Value += 1
 	MsgBox('Game creation completed!', 'Info', 0x40)
+	Run(Location)
 	PB.Value := 0
 	PBT.Text := '---'
 }
-Game.SetFont('s8 norm')
-Game.AddButton('w300', '2 - Repair').OnEvent('Click', (*) => RepairGame())
-RepairGame() {
-	If !Location := FileSelect('D', 'C:\', 'Select the game folder to repair') {
-		Return
+Game.SetFont('s10')
+SelectGameBtn := Game.AddButton('w363', 'Select/Choose')
+SelectGameBtn.OnEvent('Click', (*) => SelectGame())
+CreateImageButton(SelectGameBtn, 0, [['0xFFFFFFFF',,, 3, '0xFFB2B2B2'], ['0xFFE6E6E6'], ['0xFFCCCCCC']]*)
+SelectGame(Location := '') {
+	Gameoff.Value := 'app\gameoff.png'
+	If !Location {
+		If !Location := FileSelect('D', 'C:\', 'Select the game folder to repair') {
+			Return
+		}
 	}
 	Location := Trim(Location, '\')
 	If !IsValidSelection(&Location) {
 		Return
 	}
-	PB.Opt('Range1-10')
-	For Each, Parts in AOE_II {
-		Loop Parts[2] {
-			SplitPath(Parts[1] A_Index, &OutFileName)
-			PBT.Text := 'Getting ' OutFileName '...'
-			If !FileExist(A_Temp '\' OutFileName) {
-				Download(Parts[1] A_Index, A_Temp '\' OutFileName)
-			}
-			PBT.Text := 'Got ' OutFileName
-			PB.Value += 1
-		}
+	For Location in AllGameLocation {
+		AllGameLocation[Location] := 0
 	}
-	Log := {Corrupted: [], Missing: [], Result: "", Count: 0}
-	PBT.Text := 'Scanning your game...'
-	For File, Hash in Hashs {
-		If !FileExist(Location '\' File) {
-			If Log.Missing.Length < 10
-				Log.Result .= '[ ' File ' ] - Missing`n'
-			Log.Missing.Push(File)
-			Continue
-		}
-		If !DirExist(Location '\' File) && HashFile(Location '\' File) != Hash {
-			If Log.Corrupted.Length < 10
-				Log.Result .= '[ ' File ' ] - Unknown/Corrupted`n'
-			Log.Corrupted.Push(File)
-		}
+	If !AllGameLocation.Has(Location) {
+		GameLocation.Add([Location])
+		FileAppend(Location '`n', 'GameLocation')
 	}
-	If (Log.Missing.Length + Log.Corrupted.Length) >= 10
-		Log.Result .= '<...>'
-	PB.Value += 1
-	PBT.Text := 'Scan complete!'
-	If 'Yes' = Msgbox(Log.Result ? 'Found ' (Log.Missing.Length + Log.Corrupted.Length) ' issue(s)!`n`n' Log.Result '`n`nWant to fix them now?' : 'All game files seems good!', 'Info', Log.Result ? 0x30 + 0x4 : 0x40) {
-		PB.Value := 0
-		PB.Opt('Range1-' (Log.Missing.Length + Log.Corrupted.Length) * 3)
-		For Missed in Log.Missing {
-			For Each, Parts in AOE_II {
-				SplitPath(Parts[1] '1', &OutFileName)
-				PBT.Text := 'Restoring: "' Missed '"...'
-				RunWait(EXE ' x "' A_Temp '\' OutFileName '" -o"' Location '" "' Missed '" -aoa',, 'Hide')
-				PB.Value += 1
-			}
-		}
-		For Corrupt in Log.Corrupted {
-			For Each, Parts in AOE_II {
-				SplitPath(Parts[1] '1', &OutFileName)
-				PBT.Text := 'Repairing: "' Corrupt '"...'
-				RunWait(EXE ' x "' A_Temp '\' OutFileName '" -o"' Location '" "' Corrupt '" -aoa',, 'Hide')
-				PB.Value += 1
-			}
-		}
-		MsgBox('Game repair completed!', 'Info', 0x40)
-	}
-	PB.Value := 0
-	PBT.Text := '---'
+	AllGameLocation[Location] := 1
+	GameLocation.Choose(Location)
+	Gameoff.Value := 'app\game.png'
+	UpdateSelection()
 }
-PB := Game.AddProgress('w300 c804000 Range1-13')
-PBT := Game.AddEdit('w300 Center c804000 ReadOnly', '---')
+UpdateSelection() {
+	O := FileOpen('GameLocation', 'w')
+	For Location, S in AllGameLocation {
+		O.Write((S ? '>' : '') Location '`n')
+	}
+	O.Close()
+}
+Game.SetFont('s8 norm')
+RepairGame := Game.AddButton('w363 Disabled', 'Repair')
+;RepairGame.OnEvent('Click', (*) => RepairGame())
+;RepairGame() {
+;	If !Location := FileSelect('D', 'C:\', 'Select the game folder to repair') {
+;		Return
+;	}
+;	Location := Trim(Location, '\')
+;	If !IsValidSelection(&Location) {
+;		Return
+;	}
+;	For Each, Parts in AOE_II {
+;		Loop Parts[2] {
+;			SplitPath(Parts[1] A_Index, &OutFileName)
+;			PBT.Text := 'Getting ' OutFileName '...'
+;			If !FileExist(A_Temp '\' OutFileName) {
+;				Download(Parts[1] A_Index, A_Temp '\' OutFileName)
+;			}
+;			PBT.Text := 'Got ' OutFileName
+;			PB.Value += 1
+;		}
+;	}
+;	Log := {Corrupted: [], Missing: [], Result: "", Count: 0}
+;	PBT.Text := 'Scanning your game...'
+;	For File, Hash in Hashs {
+;		If !FileExist(Location '\' File) {
+;			If Log.Missing.Length < 10
+;				Log.Result .= '[ ' File ' ] - Missing`n'
+;			Log.Missing.Push(File)
+;			Continue
+;		}
+;		If !DirExist(Location '\' File) && HashFile(Location '\' File) != Hash {
+;			If Log.Corrupted.Length < 10
+;				Log.Result .= '[ ' File ' ] - Unknown/Corrupted`n'
+;			Log.Corrupted.Push(File)
+;		}
+;	}
+;	If (Log.Missing.Length + Log.Corrupted.Length) >= 10
+;		Log.Result .= '<...>'
+;	PB.Value += 1
+;	PBT.Text := 'Scan complete!'
+;	If 'Yes' = Msgbox(Log.Result ? 'Found ' (Log.Missing.Length + Log.Corrupted.Length) ' issue(s)!`n`n' Log.Result '`n`nWant to fix them now?' : 'All game files seems good!', 'Info', Log.Result ? 0x30 + 0x4 : 0x40) {
+;		PB.Value := 0
+;		PB.Opt('Range1-' (Log.Missing.Length + Log.Corrupted.Length) * 3)
+;		For Missed in Log.Missing {
+;			For Each, Parts in AOE_II {
+;				SplitPath(Parts[1] '1', &OutFileName)
+;				PBT.Text := 'Restoring: "' Missed '"...'
+;				RunWait(EXE ' x "' A_Temp '\' OutFileName '" -o"' Location '" "' Missed '" -aoa',, 'Hide')
+;				PB.Value += 1
+;			}
+;		}
+;		For Corrupt in Log.Corrupted {
+;			For Each, Parts in AOE_II {
+;				SplitPath(Parts[1] '1', &OutFileName)
+;				PBT.Text := 'Repairing: "' Corrupt '"...'
+;				RunWait(EXE ' x "' A_Temp '\' OutFileName '" -o"' Location '" "' Corrupt '" -aoa',, 'Hide')
+;				PB.Value += 1
+;			}
+;		}
+;		MsgBox('Game repair completed!', 'Info', 0x40)
+;	}
+;	PB.Value := 0
+;	PBT.Text := '---'
+;}
+PB := Game.AddProgress('w363 -Smooth Range1-13')
+PBT := Game.AddEdit('w363 Center -E0x200 ReadOnly', '---')
 Game.Show()
-
 IsValidSelection(&Location) {
+	If InStr(Location, '>') {
+		Location := SubStr(Location, 2)
+	}
 	If !FileExist(Location '\empires2.exe') {
 		Loop Files, Location '\*', 'D' {
 			If FileExist(Location '\' A_LoopFileName '\empires2.exe') {
@@ -156,15 +210,31 @@ IsValidSelection(&Location) {
 		}
 	}
 	Similarity := 0
-	For File in Hashs {
+	GameFiles := ["00000409.016", "00000409.256", "clcd16.dll", "clcd32.dll", "clokspl.exe", "DPLAY61A.EXE", "dplayerx.dll", "drvmgt.dll", "EBUEula.dll", "ebueulax.dll", "EBUSetup.sem", "empires2.exe", "EMPIRES2.ICD", "EULA.RTF", "EULAx.RTF", "HA312W32.DLL", "language.dll", "language_x1.dll", "Readme.rtf", "Readmex.rtf", "scenariobkg.bmp", "SETUPENU.DLL", "SHW32.DLL", "STPENUX.DLL", "version.txt", "age2_x1\00000409.016", "age2_x1\00000409.256", "age2_x1\age2_x1.exe", "age2_x1\AGE2_X1.ICD", "age2_x1\age2_x2.exe", "age2_x1\clcd16.dll", "age2_x1\clcd32.dll", "age2_x1\clokspl.exe", "age2_x1\dplayerx.dll", "age2_x1\drvmgt.dll", "age2_x1\FixAoFE.exe", "age2_x1\mcp.dll", "AI\AI.txt", "Avi\Avi.txt", "Campaign\cam1.cpn", "Campaign\cam2.cpn", "Campaign\cam3.cpn", "Campaign\cam4.cpn", "Campaign\cam8.cpn", "Campaign\xcam1.cpx", "Campaign\xcam2.cpx", "Campaign\xcam3.cpx", "Campaign\xcam4.cpx", "Campaign\Media\backgrd.slp", "Campaign\Media\backgrd1.pal", "Campaign\Media\backgrd1.sin", "Campaign\Media\backgrd1.SLP", "Campaign\Media\backgrd2.pal", "Campaign\Media\backgrd2.sin", "Campaign\Media\backgrd2.SLP", "Campaign\Media\backgrd3.pal", "Campaign\Media\backgrd3.sin", "Campaign\Media\backgrd3.SLP", "Campaign\Media\backgrd4.pal", "Campaign\Media\backgrd4.sin", "Campaign\Media\backgrd4.SLP", "Campaign\Media\backgrd8.pal", "Campaign\Media\backgrd8.sin", "Campaign\Media\backgrd8.SLP", "Campaign\Media\c1s1_beg.mm", "Campaign\Media\c1s1_beg.slp", "Campaign\Media\c1s1_end.mm", "Campaign\Media\c1s1_end.slp", "Campaign\Media\c1s2_beg.mm", "Campaign\Media\c1s2_beg.slp", "Campaign\Media\c1s2_end.mm", "Campaign\Media\c1s2_end.slp", "Campaign\Media\c1s3_beg.mm", "Campaign\Media\c1s3_beg.slp", "Campaign\Media\c1s3_end.mm", "Campaign\Media\c1s3_end.slp", "Campaign\Media\c1s4_beg.mm", "Campaign\Media\c1s4_beg.slp", "Campaign\Media\c1s4_end.mm", "Campaign\Media\c1s4_end.slp", "Campaign\Media\c1s5_beg.mm", "Campaign\Media\c1s5_beg.slp", "Campaign\Media\c1s5_end.mm", "Campaign\Media\C1s5_END.slp", "Campaign\Media\c1s6_beg.mm", "Campaign\Media\c1s6_beg.slp", "Campaign\Media\c1s6_end.mm", "Campaign\Media\C1s6_end.slp", "Campaign\Media\c2s1_beg.mm", "Campaign\Media\C2s1_beg.slp", "Campaign\Media\c2s1_end.mm", "Campaign\Media\C2S1_END.SLP", "Campaign\Media\c2s2_beg.mm", "Campaign\Media\C2S2_BEG.SLP", "Campaign\Media\c2s2_end.mm", "Campaign\Media\C2S2_END.SLP", "Campaign\Media\c2s3_beg.mm", "Campaign\Media\C2S3_BEG.SLP", "Campaign\Media\c2s3_end.mm", "Campaign\Media\C2S3_END.SLP", "Campaign\Media\c2s4_beg.mm", "Campaign\Media\C2S4_BEG.SLP", "Campaign\Media\c2s4_end.mm", "Campaign\Media\C2S4_END.SLP", "Campaign\Media\c2s5_beg.mm", "Campaign\Media\C2S5_BEG.SLP", "Campaign\Media\c2s5_end.mm", "Campaign\Media\C2S5_END.SLP", "Campaign\Media\c2s6_beg.mm", "Campaign\Media\C2S6_BEG.SLP", "Campaign\Media\c2s6_end.mm", "Campaign\Media\C2S6_END.SLP", "Campaign\Media\c3s1_beg.mm", "Campaign\Media\C3s1_bEG.slp", "Campaign\Media\c3s1_end.mm", "Campaign\Media\c3s1_end.SLP", "Campaign\Media\c3s2_beg.mm", "Campaign\Media\c3s2_beg.SLP", "Campaign\Media\c3s2_end.mm", "Campaign\Media\c3s2_end.SLP", "Campaign\Media\c3s3_beg.mm", "Campaign\Media\c3s3_beg.SLP", "Campaign\Media\c3s3_end.mm", "Campaign\Media\c3s3_end.SLP", "Campaign\Media\c3s4_beg.mm", "Campaign\Media\c3s4_beg.SLP", "Campaign\Media\c3s4_end.mm", "Campaign\Media\c3s4_end.SLP", "Campaign\Media\c3s5_beg.mm", "Campaign\Media\c3s5_beg.SLP", "Campaign\Media\c3s5_end.mm", "Campaign\Media\c3s5_end.SLP", "Campaign\Media\c3s6_beg.mm", "Campaign\Media\c3s6_beg.SLP", "Campaign\Media\c3s6_end.mm", "Campaign\Media\c3s6_end.SLP", "Campaign\Media\c4s1_beg.mm", "Campaign\Media\c4s1_beg.SLP", "Campaign\Media\c4s1_end.mm", "Campaign\Media\c4s1_end.SLP", "Campaign\Media\c4s2_beg.mm", "Campaign\Media\c4s2_beg.SLP", "Campaign\Media\c4s2_end.mm", "Campaign\Media\c4s2_end.SLP", "Campaign\Media\c4s3_beg.mm", "Campaign\Media\c4s3_beg.SLP", "Campaign\Media\c4s3_end.mm", "Campaign\Media\c4s3_end.SLP", "Campaign\Media\c4s4_beg.mm", "Campaign\Media\c4s4_beg.SLP", "Campaign\Media\c4s4_end.mm", "Campaign\Media\c4s4_end.SLP", "Campaign\Media\c4s5_beg.mm", "Campaign\Media\c4s5_beg.SLP", "Campaign\Media\c4s5_end.mm", "Campaign\Media\c4s5_end.SLP", "Campaign\Media\c4s6_beg.mm", "Campaign\Media\c4s6_beg.SLP", "Campaign\Media\c4s6_end.mm", "Campaign\Media\c4s6_end.SLP", "Campaign\Media\c8s1_beg.mm", "Campaign\Media\c8s1_beg.SLP", "Campaign\Media\c8s1_end.mm", "Campaign\Media\c8s1_end.SLP", "Campaign\Media\c8s2_beg.mm", "Campaign\Media\c8s2_beg.SLP", "Campaign\Media\c8s2_end.mm", "Campaign\Media\c8s2_end.SLP", "Campaign\Media\c8s3_beg.mm", "Campaign\Media\c8s3_beg.SLP", "Campaign\Media\c8s3_end.mm", "Campaign\Media\c8s3_end.SLP", "Campaign\Media\c8s4_beg.mm", "Campaign\Media\c8s4_beg.SLP", "Campaign\Media\c8s4_end.mm", "Campaign\Media\c8s4_end.SLP", "Campaign\Media\c8s5_beg.mm", "Campaign\Media\c8s5_beg.SLP", "Campaign\Media\c8s5_end.mm", "Campaign\Media\c8s5_end.SLP", "Campaign\Media\c8s6_beg.mm", "Campaign\Media\c8s6_beg.SLP", "Campaign\Media\c8s6_end.mm", "Campaign\Media\c8s6_end.SLP", "Campaign\Media\c8s7_beg.mm", "Campaign\Media\c8s7_beg.SLP", "Campaign\Media\c8s7_end.mm", "Campaign\Media\c8s7_end.SLP", "Campaign\Media\cam1.bln", "Campaign\Media\cam2.bln", "Campaign\Media\cam3.bln", "Campaign\Media\cam4.bln", "Campaign\Media\cam8.bln", "Campaign\Media\Intro.bln", "Campaign\Media\Intro.mm", "Campaign\Media\Intro.pal", "Campaign\Media\Intro.sin", "Campaign\Media\Intro.slp", "Campaign\Media\Introbkg.slp", "Data\blendomatic.dat", "Data\BlkEdge.Dat", "Data\closedpw.exe", "Data\empires2.dat", "Data\empires2_x1.dat", "Data\FilterMaps.dat", "Data\GAMEDATA.DRS", "Data\gamedata_x1.drs", "Data\graphics.drs", "Data\interfac.drs", "Data\lightMaps.dat", "Data\list.cr", "Data\list.crx", "Data\LoQMaps.dat", "Data\PatternMasks.dat", "Data\shadow.col", "Data\sounds.drs", "Data\sounds_x1.drs", "Data\STemplet.dat", "Data\Terrain.drs", "Data\TileEdge.Dat", "Data\view_icm.dat", "Data\Load\Load.txt", "Games\age2_x2.xml", "Games\Forgotten Empires\Data\empires2_x1_p1.dat", "Games\Forgotten Empires\Data\gamedata_x1.drs", "Games\Forgotten Empires\Data\gamedata_x1_p1.drs", "Games\Forgotten Empires\Data\language_x1_p1.dll", "Games\Forgotten Empires\History\Incas.txt", "Games\Forgotten Empires\History\Indians.txt", "Games\Forgotten Empires\History\Italians.txt", "Games\Forgotten Empires\History\Magyars.txt", "Games\Forgotten Empires\History\Slavs.txt", "Games\Forgotten Empires\Scenario\'Legionnaires on the Horizon!'.scx", "Games\Forgotten Empires\Scenario\24th of August, 410 - The Sack of Rome.scx", "Games\Forgotten Empires\Scenario\Alaric.cpx", "Games\Forgotten Empires\Scenario\Cysion - Lushful Forest.scx", "Games\Forgotten Empires\Scenario\Early 410 - Emperor of the West.scx", "Games\Forgotten Empires\Scenario\Fishing.scx", "Games\Forgotten Empires\Scenario\Last stop before Baghdad.scx", "Games\Forgotten Empires\Scenario\Prussian Uprisings.scx", "Games\Forgotten Empires\Scenario\September 408 - All Roads lead to a besieged city.scx", "Games\Forgotten Empires\Scenario\Siege of Haengju.scx", "Games\Forgotten Empires\Script.AI\Barbarian.ai", "Games\Forgotten Empires\Script.AI\Barbarian.per", "Games\Forgotten Empires\Script.AI\Crusade.ai", "Games\Forgotten Empires\Script.AI\Crusade.per", "Games\Forgotten Empires\Script.AI\Principality.ai", "Games\Forgotten Empires\Script.AI\Principality.per", "Games\Forgotten Empires\Script.AI\Promi.ai", "Games\Forgotten Empires\Script.AI\Promi.per", "Games\Forgotten Empires\Script.AI\resign - AI Ladder.per", "Games\Forgotten Empires\Script.AI\resign - land map.per", "Games\Forgotten Empires\Script.AI\Standard AI.ai", "Games\Forgotten Empires\Script.AI\Standard AI.per", "Games\Forgotten Empires\Script.AI\The Horde.ai", "Games\Forgotten Empires\Script.AI\The Horde.per", "Games\Forgotten Empires\Script.AI\The Khanate.ai", "Games\Forgotten Empires\Script.AI\The Khanate.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\AztecSuperRush.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\CA.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Castles.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Commands.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\CommandsTG.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\DeathMatch.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\DMConstants.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Drush.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\FlankAggressiveness.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\HardestCheats.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\HeavySkirms.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\IslandsFireEco.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\IslandsGalleyEco.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\KnightRush.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\MayanEagleRush.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\MIX.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\MonksAndTrebs.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\OnlyMeso.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\PocketAggressiveness.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\RaidTheCamps.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Resigning.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\RuleBuffer.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\ScoutArcher.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\ScoutDefence.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\ScoutSkirm.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\SLING.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies1v1.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\StrategiesTG.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\SuicidalKnightRush.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\TheAntiCysion.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\TheGreatWall.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\TheGrowlOfTheJaguar.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\TurkSaraExtra.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\UnusualSwitch.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Uusi tekstiasiakirja.txt", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\WallAndBoom.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\WonderAssault.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\WonderVictory.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\AddedDrush.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\ARCHER1.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\ARCHER2.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\BOMBARDMENT.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\CASTLEPUSH.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\CASTLESLING.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\EternalDrush.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FastEagles.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC10.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC11.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC12.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC15.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC16.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC17.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC2BOOM.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC2FI.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC3.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC4.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC7.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC9FI.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FIARCHER.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FIMONKTREB.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FULLSKIRM.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\JAGUARS.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\KBOOM.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\KNIGHTARCHER.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\KNIGHTBOOM.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\KRUSH.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MAA1ARCHER1.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MAA1ARCHER2.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MAA2.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MANGOPUSH.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MISSIONARY.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MONGOLBOOM.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MONKBOOM.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MUSH.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\PocketWaterFC.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\RANGEDBOOM.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SCORPS.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SCOUT1ARCHER1.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SCOUT1SKIRM1.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SKIRMBOOM.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SMUSH.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SUPERSCOUTS.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\TRASH1.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Turtles.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Uusi tekstiasiakirja.txt", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\WALLS.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\WarElephants.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\WarGalleys.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-camel-cannoneer.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-cannoneers.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-champ-cannoneer.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-champ-turtle.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-champs.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-eagles.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-halb-husk.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-halb-scorpion.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-husk-champ.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-pala-turtle.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-palas.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-UU-champ.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-UU.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\Uusi tekstiasiakirja.txt", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set01.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set02.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set03.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set04.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set05.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set06.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set07.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\SuperTraitor.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Traitor.per", "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Uusi tekstiasiakirja.txt", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Amphibian.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Army Selection.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Attack evolution.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Attack rules.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Battle behavior.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Boar Hunting.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Alpha.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Betha - 1c.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Betha - UP.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Omega - 1c.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Omega - UP.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Zero - 1c.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Zero - UP.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Calculate gatherers wood-marathon.xlsx", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Camps - 1c.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Camps - UP.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Chat.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Constants FactID.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Constants for civs.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Constants.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Control Upgrades.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Extra Upgrades.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\FC Archery.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Archery-3.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Man-at-arms.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Market Scouts-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Market Swords-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Market Swords.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Scouts-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Swords-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Forgotten Empires Constants.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\g-jollygoal-0.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Gatherer percentages Dark Age.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Gatherer percentages Late Game.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Gatherer-Dynamic percentages Late Feudal.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\General Economy.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Initial strategic numbers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Main Upgrades.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Marathon XLS.zip", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Market rules.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Military superiority 2.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Military superiority.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Navy superiority.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Obsolet strategic numbers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\resign - AI Ladder.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Resign - Human.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Sheep.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Archery-3.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Man-at-arms.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Market Scouts-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Scouts-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Swords-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Trush Scouts-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Trush Swords-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy selection.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Threat rules.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Trebuchet.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Tribute.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Trush Scouts-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Trush Swords-Archers.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\TS Building.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\TSA Defensive.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\TSA.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Unit Training.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\UP initialization.per", "Games\Forgotten Empires\Script.AI\Crusade 4.42\Wonder Race.per", "Games\Forgotten Empires\Script.AI\Promi\aofe.per", "Games\Forgotten Empires\Script.AI\Promi\boarhunting.per", "Games\Forgotten Empires\Script.AI\Promi\buildings.per", "Games\Forgotten Empires\Script.AI\Promi\Const.per", "Games\Forgotten Empires\Script.AI\Promi\gatherers.per", "Games\Forgotten Empires\Script.AI\Promi\General.per", "Games\Forgotten Empires\Script.AI\Promi\Init.per", "Games\Forgotten Empires\Script.AI\Promi\interaction.per", "Games\Forgotten Empires\Script.AI\Promi\researches.per", "Games\Forgotten Empires\Script.AI\Promi\resign.per", "Games\Forgotten Empires\Script.AI\Promi\Teamsuperiority.per", "Games\Forgotten Empires\Script.AI\Promi\threats.per", "Games\Forgotten Empires\Script.AI\Promi\trade.per", "Games\Forgotten Empires\Script.AI\Promi\TSA.per", "Games\Forgotten Empires\Script.AI\Promi\units.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite ai petersen rules.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen castle.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen civ loads.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen constants.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen deathmatch.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen difficulty loads.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip boomer.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip bully.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip feeder.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip insult.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip liar.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen diplomacy.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen fishboat.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen full tech.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen gather.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen groups.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen map loads.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen market.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen resign.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen rush.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen supplement.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen tower.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen upgrades.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen warboat island.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen warboat.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen wonder.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite randomgame.ai", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite randomgame.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite wonder kill.per", "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite wonder rush.per", "Games\Forgotten Empires\Script.RM\Acropolis.rms", "Games\Forgotten Empires\Script.RM\Budapest.rms", "Games\Forgotten Empires\Script.RM\Cenotes.rms", "Games\Forgotten Empires\Script.RM\Golden Pit.rms", "Games\Forgotten Empires\Script.RM\Hideout.rms", "Games\Forgotten Empires\Script.RM\Hill Fort.rms", "Games\Forgotten Empires\Script.RM\Land of Lakes.rms", "Games\Forgotten Empires\Script.RM\Lombardia.rms", "Games\Forgotten Empires\Script.RM\MegaRandom Beta.rms", "Games\Forgotten Empires\Script.RM\Random.txt", "Games\Forgotten Empires\Script.RM\Steppe.rms", "Games\Forgotten Empires\Script.RM\Team Arena.rms", "Games\Forgotten Empires\Script.RM\Valley.rms", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 3.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 4.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 5.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 6.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 7.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 8.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 9.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Athaulf 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Athaulf 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Athaulf's scout.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Captain 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Guard 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Informant 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Pikeman 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Pikeman 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Scout 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Scout 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Scout 3.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Scout 4.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Timer 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Timer 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Timer 3.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 3.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 4.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 5.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Bodyguard 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Condottiero 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Knight 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Knight 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Knight 3.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Mercenary 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - sailor 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Saurus 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Soldier 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Village Knight 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 3.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 4.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 5.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 6.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 3.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 4.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 5.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 6.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 7.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 8.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Caelir 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - centurion 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Civilian 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Knight 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Soldier a.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Soldier b.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric Scenario - Guard.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Alaric 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Alaric 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Monk.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Prisoners.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Refugee.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Scout.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 1.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 2.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 3.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 4.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 5.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 6.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 7.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 8.mp3", "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 9.mp3", "Games\Forgotten Empires\Sound\stream\INCAS.mp3", "Games\Forgotten Empires\Sound\stream\INDIANS.mp3", "Games\Forgotten Empires\Sound\stream\ITALIANS.mp3", "Games\Forgotten Empires\Sound\stream\LOST.mp3", "Games\Forgotten Empires\Sound\stream\MAGYARS.mp3", "Games\Forgotten Empires\Sound\stream\SLAVS.mp3", "Games\Forgotten Empires\Sound\stream\xopen.mp3", "History\Armies.txt", "History\ArmiesMongols.txt", "History\ArmiesOrg.txt", "History\ArmiesStrat.txt", "History\ArmiesTactics.txt", "History\Aztecs.txt", "History\barbarianinvaders.txt", "History\British original.txt", "History\british regular.txt", "History\british test.txt", "History\british.txt", "History\Byzantines.txt", "History\CastleDefenses.txt", "History\CastleEvolution.txt", "History\Castles.txt", "History\CastleSiege.txt", "History\Celts.txt", "History\charlemagne.txt", "History\Chinese.txt", "History\darkagereligion.txt", "History\darkages.txt", "History\DarkArmies.txt", "History\economy.txt", "History\feudalcontract.txt", "History\feudalism.txt", "History\feudalismdecline.txt", "History\Franks.txt", "History\Goths.txt", "History\Gunpowder.txt", "History\history.txt", "History\Huns.txt", "History\Japanese.txt", "History\Knights.txt", "History\Koreans.txt", "History\latemiddleages.txt", "History\Mayans.txt", "History\middleages.txt", "History\Mongols.txt", "History\Naval.txt", "History\Persians.txt", "History\politics.txt", "History\religion.txt", "History\renaissance.txt", "History\Saracens.txt", "History\Spanish.txt", "History\technology.txt", "History\Teutons.txt", "History\thecrusades.txt", "History\thefallofrome.txt", "History\themanor.txt", "History\thevikings.txt", "History\Turks.txt", "History\Vikings.txt", "History\Warfare.txt", "History\Weapons.txt", "History\WeaponsCav.txt", "History\WeaponsHand.txt", "History\WeaponsMissile.txt", "Learn\Learn.txt", "Random\Random.txt", "SaveGame\SaveGame.txt", "SaveGame\Multi\Multi.txt", "Scenario\scenario.inf", "Sound\campaign\c1s1.mp3", "Sound\campaign\c1s1end.mp3", "Sound\campaign\c1s2.mp3", "Sound\campaign\c1s2end.mp3", "Sound\campaign\c1s3.mp3", "Sound\campaign\c1s3end.mp3", "Sound\campaign\c1s4.mp3", "Sound\campaign\c1s4end.mp3", "Sound\campaign\c1s5.mp3", "Sound\campaign\c1s5end.mp3", "Sound\campaign\c1s6.mp3", "Sound\campaign\c1s6end.mp3", "Sound\campaign\c2s1.mp3", "Sound\campaign\c2s1end.mp3", "Sound\campaign\c2s2.mp3", "Sound\campaign\c2s2end.mp3", "Sound\campaign\c2s3.mp3", "Sound\campaign\c2s3end.mp3", "Sound\campaign\c2s4.mp3", "Sound\campaign\c2s4end.mp3", "Sound\campaign\c2s5.mp3", "Sound\campaign\c2s5end.mp3", "Sound\campaign\c2s6.mp3", "Sound\campaign\c2s6end.mp3", "Sound\campaign\c3s1.mp3", "Sound\campaign\c3s1end.mp3", "Sound\campaign\c3s2.mp3", "Sound\campaign\c3s2end.mp3", "Sound\campaign\c3s3.mp3", "Sound\campaign\c3s3end.mp3", "Sound\campaign\c3s4.mp3", "Sound\campaign\c3s4end.mp3", "Sound\campaign\c3s5.mp3", "Sound\campaign\c3s5end.mp3", "Sound\campaign\c3s6.mp3", "Sound\campaign\c3s6end.mp3", "Sound\campaign\c4s1.mp3", "Sound\campaign\c4s1end.mp3", "Sound\campaign\c4s2.mp3", "Sound\campaign\c4s2end.mp3", "Sound\campaign\c4s3.mp3", "Sound\campaign\c4s3end.mp3", "Sound\campaign\c4s4.mp3", "Sound\campaign\c4s4end.mp3", "Sound\campaign\c4s5.mp3", "Sound\campaign\c4s5end.mp3", "Sound\campaign\c4s6.mp3", "Sound\campaign\c4s6end.mp3", "Sound\campaign\c8s1.mp3", "Sound\campaign\c8s1end.mp3", "Sound\campaign\c8s2.mp3", "Sound\campaign\c8s2end.mp3", "Sound\campaign\c8s3.mp3", "Sound\campaign\c8s3end.mp3", "Sound\campaign\c8s4.mp3", "Sound\campaign\c8s4end.mp3", "Sound\campaign\c8s5.mp3", "Sound\campaign\c8s5end.mp3", "Sound\campaign\c8s6.mp3", "Sound\campaign\c8s6end.mp3", "Sound\campaign\c8s7.mp3", "Sound\campaign\c8s7end.mp3", "Sound\campaign\intro.mp3", "Sound\scenario\a1a.mp3", "Sound\scenario\A1AA.mp3", "Sound\scenario\a1ab.mp3", "Sound\scenario\a1ac.mp3", "Sound\scenario\a1ad.mp3", "Sound\scenario\a1ae.mp3", "Sound\scenario\a1af.mp3", "Sound\scenario\a1ag.mp3", "Sound\scenario\a1ah.mp3", "Sound\scenario\a1b.mp3", "Sound\scenario\a1c.mp3", "Sound\scenario\a1d.mp3", "Sound\scenario\a1e.mp3", "Sound\scenario\a1f.mp3", "Sound\scenario\a1g.mp3", "Sound\scenario\a1h.mp3", "Sound\scenario\a1i.mp3", "Sound\scenario\a1j.mp3", "Sound\scenario\a1k.mp3", "Sound\scenario\a1l.mp3", "Sound\scenario\a1m.mp3", "Sound\scenario\a1n.mp3", "Sound\scenario\a1o.mp3", "Sound\scenario\a1p.mp3", "Sound\scenario\a1q.mp3", "Sound\scenario\a1r.mp3", "Sound\scenario\a1s.mp3", "Sound\scenario\a1t.mp3", "Sound\scenario\a1u.mp3", "Sound\scenario\a1v.mp3", "Sound\scenario\a1w.mp3", "Sound\scenario\a1x.mp3", "Sound\scenario\a1xa.mp3", "Sound\scenario\a1y.mp3", "Sound\scenario\a1z.mp3", "Sound\scenario\a2a.mp3", "Sound\scenario\a2b.mp3", "Sound\scenario\a2c.mp3", "Sound\scenario\a2d.mp3", "Sound\scenario\a2e.mp3", "Sound\scenario\a2f.mp3", "Sound\scenario\a2g.mp3", "Sound\scenario\a2h.mp3", "Sound\scenario\a2i.mp3", "Sound\scenario\a2j.mp3", "Sound\scenario\a2k.mp3", "Sound\scenario\a2l.mp3", "Sound\scenario\a2m.mp3", "Sound\scenario\a2n.mp3", "Sound\scenario\a2o.mp3", "Sound\scenario\a2p.mp3", "Sound\scenario\a2q.mp3", "Sound\scenario\a2r.mp3", "Sound\scenario\a2s.mp3", "Sound\scenario\a3a.mp3", "Sound\scenario\a3b.mp3", "Sound\scenario\a3c.mp3", "Sound\scenario\a3d.mp3", "Sound\scenario\a3e.mp3", "Sound\scenario\a3f.mp3", "Sound\scenario\a3g.mp3", "Sound\scenario\a3h.mp3", "Sound\scenario\a3i.mp3", "Sound\scenario\a3j.mp3", "Sound\scenario\a3k.mp3", "Sound\scenario\a3l.mp3", "Sound\scenario\a3m.mp3", "Sound\scenario\a3n.mp3", "Sound\scenario\a3o.mp3", "Sound\scenario\a3p.mp3", "Sound\scenario\a4a.mp3", "Sound\scenario\a4b.mp3", "Sound\scenario\a4c.mp3", "Sound\scenario\a4d.mp3", "Sound\scenario\a4e.mp3", "Sound\scenario\a4f.mp3", "Sound\scenario\a5a.mp3", "Sound\scenario\a5b.mp3", "Sound\scenario\a5c.mp3", "Sound\scenario\a5d.mp3", "Sound\scenario\a6a.mp3", "Sound\scenario\a6b.mp3", "Sound\scenario\Age Up.mp3", "Sound\scenario\b1a.mp3", "Sound\scenario\b1b.mp3", "Sound\scenario\b1c.mp3", "Sound\scenario\b1d.mp3", "Sound\scenario\b2a.mp3", "Sound\scenario\b2b.mp3", "Sound\scenario\b2c.mp3", "Sound\scenario\b3a.mp3", "Sound\scenario\b3aa.mp3", "Sound\scenario\b3b.mp3", "Sound\scenario\b3c.mp3", "Sound\scenario\b3d.mp3", "Sound\scenario\b3e.mp3", "Sound\scenario\b4b.mp3", "Sound\scenario\b4c.mp3", "Sound\scenario\b4d.mp3", "Sound\scenario\b4e.mp3", "Sound\scenario\b4f.mp3", "Sound\scenario\b5a.mp3", "Sound\scenario\b5b.mp3", "Sound\scenario\b5c.mp3", "Sound\scenario\b5d.mp3", "Sound\scenario\b5e.mp3", "Sound\scenario\b5f.mp3", "Sound\scenario\b5g.mp3", "Sound\scenario\b5h.mp3", "Sound\scenario\b5i.mp3", "Sound\scenario\b5j.mp3", "Sound\scenario\b5k.mp3", "Sound\scenario\b5l.mp3", "Sound\scenario\b5m.mp3", "Sound\scenario\b5n.mp3", "Sound\scenario\b5o.mp3", "Sound\scenario\b5p.mp3", "Sound\scenario\b5q.mp3", "Sound\scenario\b6a.mp3", "Sound\scenario\b6b.mp3", "Sound\scenario\b6c.mp3", "Sound\scenario\b6d.mp3", "Sound\scenario\b6e.mp3", "Sound\scenario\b6f.mp3", "Sound\scenario\b6g.mp3", "Sound\scenario\b6h.mp3", "Sound\scenario\b6i.mp3", "Sound\scenario\b6j.mp3", "Sound\scenario\b6k.mp3", "Sound\scenario\b6l.mp3", "Sound\scenario\b6m.mp3", "Sound\scenario\b6n.mp3", "Sound\scenario\c1a.mp3", "Sound\scenario\c1b.mp3", "Sound\scenario\c1c.mp3", "Sound\scenario\c1d.mp3", "Sound\scenario\c1e.mp3", "Sound\scenario\c2a.mp3", "Sound\scenario\c2b.mp3", "Sound\scenario\c2c.mp3", "Sound\scenario\c2d.mp3", "Sound\scenario\c2e.mp3", "Sound\scenario\c2f.mp3", "Sound\scenario\c2g.mp3", "Sound\scenario\c2h.mp3", "Sound\scenario\c2i.mp3", "Sound\scenario\c2j.mp3", "Sound\scenario\c2k.mp3", "Sound\scenario\c2l.mp3", "Sound\scenario\c3a.mp3", "Sound\scenario\c3b.mp3", "Sound\scenario\c3c.mp3", "Sound\scenario\c3d.mp3", "Sound\scenario\c3e.mp3", "Sound\scenario\c3f.mp3", "Sound\scenario\c3g.mp3", "Sound\scenario\c3h.mp3", "Sound\scenario\c4a.mp3", "Sound\scenario\c4b.mp3", "Sound\scenario\c4c.mp3", "Sound\scenario\c4d.mp3", "Sound\scenario\c4e.mp3", "Sound\scenario\c4f.mp3", "Sound\scenario\c4g.mp3", "Sound\scenario\c4h.mp3", "Sound\scenario\c4i.mp3", "Sound\scenario\c4j.mp3", "Sound\scenario\c4ja.mp3", "Sound\scenario\c4k.mp3", "Sound\scenario\c5a.mp3", "Sound\scenario\c5b.mp3", "Sound\scenario\c5c.mp3", "Sound\scenario\c5ca.mp3", "Sound\scenario\c5d.mp3", "Sound\scenario\c5da.mp3", "Sound\scenario\c5e.mp3", "Sound\scenario\c5f.mp3", "Sound\scenario\c5g.mp3", "Sound\scenario\c5h.mp3", "Sound\scenario\c5i.mp3", "Sound\scenario\c5j.mp3", "Sound\scenario\c5k.mp3", "Sound\scenario\c5l.mp3", "Sound\scenario\c5m.mp3", "Sound\scenario\c5n.mp3", "Sound\scenario\c5o.mp3", "Sound\scenario\c5p.mp3", "Sound\scenario\c5q.mp3", "Sound\scenario\c5r.mp3", "Sound\scenario\c6a.mp3", "Sound\scenario\c6b.mp3", "Sound\scenario\c6c.mp3", "Sound\scenario\c6d.mp3", "Sound\scenario\c6e.mp3", "Sound\scenario\c6f.mp3", "Sound\scenario\c6g.mp3", "Sound\scenario\c6h.mp3", "Sound\scenario\c6i.mp3", "Sound\scenario\c7a.mp3", "Sound\scenario\c7b.mp3", "Sound\scenario\c7c.mp3", "Sound\scenario\c7d.mp3", "Sound\scenario\c7e.mp3", "Sound\scenario\c7f.mp3", "Sound\scenario\c7g.mp3", "Sound\scenario\c7h.mp3", "Sound\scenario\c8a.mp3", "Sound\scenario\c8b.mp3", "Sound\scenario\c8c.mp3", "Sound\scenario\c8d.mp3", "Sound\scenario\c8e.mp3", "Sound\scenario\d1a.mp3", "Sound\scenario\d1b.mp3", "Sound\scenario\d1c.mp3", "Sound\scenario\e1a.mp3", "Sound\scenario\e1aa.mp3", "Sound\scenario\e1b.mp3", "Sound\scenario\e1c.mp3", "Sound\scenario\e1d.mp3", "Sound\scenario\e1e.mp3", "Sound\scenario\e1f.mp3", "Sound\scenario\e1g.mp3", "Sound\scenario\e1h.mp3", "Sound\scenario\e1j.mp3", "Sound\scenario\e1k.mp3", "Sound\scenario\e1l.mp3", "Sound\scenario\e1n.mp3", "Sound\scenario\E1o.mp3", "Sound\scenario\e1p.mp3", "Sound\scenario\e1q.mp3", "Sound\scenario\e1r.mp3", "Sound\scenario\e1s.mp3", "Sound\scenario\e1t.mp3", "Sound\scenario\e1u.mp3", "Sound\scenario\e1ua.mp3", "Sound\scenario\e1v.mp3", "Sound\scenario\e1w.mp3", "Sound\scenario\e1x.mp3", "Sound\scenario\E1Y.mp3", "Sound\scenario\e1z.mp3", "Sound\scenario\e2a.mp3", "Sound\scenario\e2b.mp3", "Sound\scenario\e2c.mp3", "Sound\scenario\e2d.mp3", "Sound\scenario\e2e.mp3", "Sound\scenario\e2f.mp3", "Sound\scenario\e2g.mp3", "Sound\scenario\e2h.mp3", "Sound\scenario\e3a.mp3", "Sound\scenario\e3b.mp3", "Sound\scenario\e3c.mp3", "Sound\scenario\e3d.mp3", "Sound\scenario\e3e.mp3", "Sound\scenario\e3f.mp3", "Sound\scenario\e3g.mp3", "Sound\scenario\e3h.mp3", "Sound\scenario\e3i.mp3", "Sound\scenario\e3j.mp3", "Sound\scenario\e3k.mp3", "Sound\scenario\e3l.mp3", "Sound\scenario\e3m.mp3", "Sound\scenario\e4a.mp3", "Sound\scenario\e4b.mp3", "Sound\scenario\e4c.mp3", "Sound\scenario\e4d.mp3", "Sound\scenario\e4e.mp3", "Sound\scenario\e4f.mp3", "Sound\scenario\e4g.mp3", "Sound\scenario\e4h.mp3", "Sound\scenario\e4i.mp3", "Sound\scenario\e4j.mp3", "Sound\scenario\e4k.mp3", "Sound\scenario\e4l.mp3", "Sound\scenario\e4m.mp3", "Sound\scenario\e4n.mp3", "Sound\scenario\e4o.mp3", "Sound\scenario\e4p.mp3", "Sound\scenario\e4q.mp3", "Sound\scenario\e4r.mp3", "Sound\scenario\e4s.mp3", "Sound\scenario\e4t.mp3", "Sound\scenario\e4u.mp3", "Sound\scenario\e4v.mp3", "Sound\scenario\e4w.mp3", "Sound\scenario\e4x.mp3", "Sound\scenario\e4y.mp3", "Sound\scenario\e5a.mp3", "Sound\scenario\e5b.mp3", "Sound\scenario\e5c.mp3", "Sound\scenario\e5d.mp3", "Sound\scenario\e5e.mp3", "Sound\scenario\e5f.mp3", "Sound\scenario\e5g.mp3", "Sound\scenario\e5h.mp3", "Sound\scenario\e5i.mp3", "Sound\scenario\e5j.mp3", "Sound\scenario\e5k.mp3", "Sound\scenario\e5l.mp3", "Sound\scenario\e6a.mp3", "Sound\scenario\e6b.mp3", "Sound\scenario\g1a.mp3", "Sound\scenario\g1b.mp3", "Sound\scenario\g1c.mp3", "Sound\scenario\g1d.mp3", "Sound\scenario\g1e.mp3", "Sound\scenario\g1f.mp3", "Sound\scenario\g1g.mp3", "Sound\scenario\g1h.mp3", "Sound\scenario\g1i.mp3", "Sound\scenario\g1j.mp3", "Sound\scenario\g1k.mp3", "Sound\scenario\g1l.mp3", "Sound\scenario\g1lold.mp3", "Sound\scenario\g1m.mp3", "Sound\scenario\g2a.mp3", "Sound\scenario\g2b.mp3", "Sound\scenario\g2c.mp3", "Sound\scenario\g2d.mp3", "Sound\scenario\g2e.mp3", "Sound\scenario\g2f.mp3", "Sound\scenario\g2g.mp3", "Sound\scenario\g2h.mp3", "Sound\scenario\g3a.mp3", "Sound\scenario\g3b.mp3", "Sound\scenario\g3c.mp3", "Sound\scenario\g3d.mp3", "Sound\scenario\g3e.mp3", "Sound\scenario\g4a.mp3", "Sound\scenario\g4b.mp3", "Sound\scenario\g4c.mp3", "Sound\scenario\g4d.mp3", "Sound\scenario\g4e.mp3", "Sound\scenario\g4f.mp3", "Sound\scenario\g4g.mp3", "Sound\scenario\g4h.mp3", "Sound\scenario\g4i.mp3", "Sound\scenario\g4j.mp3", "Sound\scenario\g5a.mp3", "Sound\scenario\g5b.mp3", "Sound\scenario\g5c.mp3", "Sound\scenario\g5d.mp3", "Sound\scenario\g5e.mp3", "Sound\scenario\g5f.mp3", "Sound\scenario\g5g.mp3", "Sound\scenario\g5h.mp3", "Sound\scenario\g5i.mp3", "Sound\scenario\g5j.mp3", "Sound\scenario\g6a.mp3", "Sound\scenario\g6b.mp3", "Sound\scenario\g6c.mp3", "Sound\scenario\g6d.mp3", "Sound\scenario\g6e.mp3", "Sound\scenario\g6f.mp3", "Sound\scenario\g6g.mp3", "Sound\scenario\g6h.mp3", "Sound\scenario\g6i.mp3", "Sound\scenario\j1a.mp3", "Sound\scenario\j1b.mp3", "Sound\scenario\j1c.mp3", "Sound\scenario\j1d.mp3", "Sound\scenario\j1e.mp3", "Sound\scenario\j1f.mp3", "Sound\scenario\j1g.mp3", "Sound\scenario\j1h.mp3", "Sound\scenario\j1i.mp3", "Sound\scenario\j1j.mp3", "Sound\scenario\j1k.mp3", "Sound\scenario\j1l.mp3", "Sound\scenario\j1m.mp3", "Sound\scenario\j1n.mp3", "Sound\scenario\j1o.mp3", "Sound\scenario\j1p.mp3", "Sound\scenario\j1q.mp3", "Sound\scenario\j1r.mp3", "Sound\scenario\j1t.mp3", "Sound\scenario\j1u.mp3", "Sound\scenario\j1v.mp3", "Sound\scenario\j1w.mp3", "Sound\scenario\j1x.mp3", "Sound\scenario\j1y.mp3", "Sound\scenario\j1z.mp3", "Sound\scenario\j2a.mp3", "Sound\scenario\j2b.mp3", "Sound\scenario\j2c.mp3", "Sound\scenario\j2d.mp3", "Sound\scenario\j2e.mp3", "Sound\scenario\j2f.mp3", "Sound\scenario\j2g.mp3", "Sound\scenario\j2h.mp3", "Sound\scenario\j2i.mp3", "Sound\scenario\j2j.mp3", "Sound\scenario\j2k.mp3", "Sound\scenario\j2l.mp3", "Sound\scenario\j2m.mp3", "Sound\scenario\j2n.mp3", "Sound\scenario\j2o.mp3", "Sound\scenario\j3a.mp3", "Sound\scenario\j3b.mp3", "Sound\scenario\j3c.mp3", "Sound\scenario\j3d.mp3", "Sound\scenario\j3e.mp3", "Sound\scenario\j3f.mp3", "Sound\scenario\j3g.mp3", "Sound\scenario\j3h.mp3", "Sound\scenario\j3i.mp3", "Sound\scenario\j3j.mp3", "Sound\scenario\j3k.mp3", "Sound\scenario\j3l.mp3", "Sound\scenario\j3m.mp3", "Sound\scenario\j3n.mp3", "Sound\scenario\j3o.mp3", "Sound\scenario\j3p.mp3", "Sound\scenario\j4a.mp3", "Sound\scenario\j4b.mp3", "Sound\scenario\j4c.mp3", "Sound\scenario\j4c2.mp3", "Sound\scenario\j4d.mp3", "Sound\scenario\j4e.mp3", "Sound\scenario\j4f.mp3", "Sound\scenario\j4h.mp3", "Sound\scenario\j4i.mp3", "Sound\scenario\j4j.mp3", "Sound\scenario\j5a.mp3", "Sound\scenario\j5b.mp3", "Sound\scenario\j5c.mp3", "Sound\scenario\j5d.mp3", "Sound\scenario\j5e.mp3", "Sound\scenario\j5f.mp3", "Sound\scenario\j5g.mp3", "Sound\scenario\j5h.mp3", "Sound\scenario\j5i.mp3", "Sound\scenario\j5j.mp3", "Sound\scenario\j5k.mp3", "Sound\scenario\j5l.mp3", "Sound\scenario\j6a.mp3", "Sound\scenario\j6a2.mp3", "Sound\scenario\j6b.mp3", "Sound\scenario\j6c.mp3", "Sound\scenario\j6d.mp3", "Sound\scenario\j6e.mp3", "Sound\scenario\j6f.mp3", "Sound\scenario\j6g.mp3", "Sound\scenario\j6i.mp3", "Sound\scenario\j6j.mp3", "Sound\scenario\j6k.mp3", "Sound\scenario\j6l.mp3", "Sound\scenario\j6m.mp3", "Sound\scenario\j6n.mp3", "Sound\scenario\j6o.mp3", "Sound\scenario\j6q.mp3", "Sound\scenario\m1a.mp3", "Sound\scenario\m1b.mp3", "Sound\scenario\m1c.mp3", "Sound\scenario\m2a.mp3", "Sound\scenario\m2b.mp3", "Sound\scenario\m2c.mp3", "Sound\scenario\m2d.mp3", "Sound\scenario\m2e.mp3", "Sound\scenario\m2f.mp3", "Sound\scenario\m2g.mp3", "Sound\scenario\m2h.mp3", "Sound\scenario\m2i.mp3", "Sound\scenario\m2j.mp3", "Sound\scenario\m2k.mp3", "Sound\scenario\m2l.mp3", "Sound\scenario\m2m.mp3", "Sound\scenario\m2n.mp3", "Sound\scenario\m2o.mp3", "Sound\scenario\m2p.mp3", "Sound\scenario\m2q.mp3", "Sound\scenario\m3a.mp3", "Sound\scenario\m3b.mp3", "Sound\scenario\m3c.mp3", "Sound\scenario\m3d.mp3", "Sound\scenario\m3e.mp3", "Sound\scenario\m3f.mp3", "Sound\scenario\m3g.mp3", "Sound\scenario\m3h.mp3", "Sound\scenario\m3i.mp3", "Sound\scenario\m3j.mp3", "Sound\scenario\m4a.mp3", "Sound\scenario\M4B.mp3", "Sound\scenario\M4C.mp3", "Sound\scenario\m4d.mp3", "Sound\scenario\m4e.mp3", "Sound\scenario\m4f.mp3", "Sound\scenario\m4g.mp3", "Sound\scenario\m4h.mp3", "Sound\scenario\m4i.mp3", "Sound\scenario\m4j.mp3", "Sound\scenario\m4k.mp3", "Sound\scenario\m4m.mp3", "Sound\scenario\m5a.mp3", "Sound\scenario\m5b.mp3", "Sound\scenario\m5c.mp3", "Sound\scenario\m5d.mp3", "Sound\scenario\m5e.mp3", "Sound\scenario\m5f.mp3", "Sound\scenario\m5g.mp3", "Sound\scenario\m5h.mp3", "Sound\scenario\m6a.mp3", "Sound\scenario\m6b.mp3", "Sound\scenario\m6c.mp3", "Sound\scenario\m6d.mp3", "Sound\scenario\m6e.mp3", "Sound\scenario\m6f.mp3", "Sound\scenario\mc6.mp3", "Sound\scenario\S1a.mp3", "Sound\scenario\s1b.mp3", "Sound\scenario\s1c.mp3", "Sound\scenario\s1d.mp3", "Sound\scenario\s1e.mp3", "Sound\scenario\s1f.mp3", "Sound\scenario\s1g.mp3", "Sound\scenario\s1h.mp3", "Sound\scenario\s1i.mp3", "Sound\scenario\s1j.mp3", "Sound\scenario\s2a.mp3", "Sound\scenario\s2b.mp3", "Sound\scenario\s2c.mp3", "Sound\scenario\s2d.mp3", "Sound\scenario\s2e.mp3", "Sound\scenario\s2f.mp3", "Sound\scenario\s2g.mp3", "Sound\scenario\s2i.mp3", "Sound\scenario\s2j.mp3", "Sound\scenario\s2l.mp3", "Sound\scenario\s3a.mp3", "Sound\scenario\s3b.mp3", "Sound\scenario\s3c.mp3", "Sound\scenario\s3d.mp3", "Sound\scenario\s3e.mp3", "Sound\scenario\s3f.mp3", "Sound\scenario\s4a.mp3", "Sound\scenario\s4b.mp3", "Sound\scenario\s4c.mp3", "Sound\scenario\s4d.mp3", "Sound\scenario\s4e.mp3", "Sound\scenario\s4f.mp3", "Sound\scenario\s4g.mp3", "Sound\scenario\s4h.mp3", "Sound\scenario\s4i.mp3", "Sound\scenario\s4j.mp3", "Sound\scenario\s4k.mp3", "Sound\scenario\s4l.mp3", "Sound\scenario\s4m.mp3", "Sound\scenario\s5a.mp3", "Sound\scenario\s5b.mp3", "Sound\scenario\s5c.mp3", "Sound\scenario\s5d.mp3", "Sound\scenario\s6a.mp3", "Sound\scenario\s6b.mp3", "Sound\scenario\s6c.mp3", "Sound\scenario\s6d.mp3", "Sound\scenario\s6e.mp3", "Sound\scenario\s6f.mp3", "Sound\scenario\s6g.mp3", "Sound\scenario\s6h.mp3", "Sound\scenario\s6i.mp3", "Sound\scenario\w1a.mp3", "Sound\scenario\w1b.mp3", "Sound\scenario\w1c.mp3", "Sound\scenario\w1d.mp3", "Sound\scenario\w1e.mp3", "Sound\scenario\w1f.mp3", "Sound\scenario\w1g.mp3", "Sound\scenario\w1h.mp3", "Sound\scenario\w1i.mp3", "Sound\scenario\w1j.mp3", "Sound\scenario\w1k.mp3", "Sound\scenario\w1l.mp3", "Sound\scenario\w1m.mp3", "Sound\scenario\w1n.mp3", "Sound\scenario\w1o.mp3", "Sound\scenario\w1p.mp3", "Sound\scenario\w1q.mp3", "Sound\scenario\w1r.mp3", "Sound\scenario\w1s.mp3", "Sound\scenario\w1t.mp3", "Sound\scenario\w1wa.mp3", "Sound\scenario\w1wb.mp3", "Sound\scenario\w1wc.mp3", "Sound\scenario\w2a.mp3", "Sound\scenario\w2aa.mp3", "Sound\scenario\w2b.mp3", "Sound\scenario\w2c.mp3", "Sound\scenario\w2d.mp3", "Sound\scenario\w2e.mp3", "Sound\scenario\w2f.mp3", "Sound\scenario\w2g.mp3", "Sound\scenario\w2h.mp3", "Sound\scenario\w2i.mp3", "Sound\scenario\w2j.mp3", "Sound\scenario\w2k.mp3", "Sound\scenario\w2wa.mp3", "Sound\scenario\w3a.mp3", "Sound\scenario\w3b.mp3", "Sound\scenario\w3c.mp3", "Sound\scenario\w3d.mp3", "Sound\scenario\w3e.mp3", "Sound\scenario\w3e2.mp3", "Sound\scenario\w3f.mp3", "Sound\scenario\w3g.mp3", "Sound\scenario\w3h.mp3", "Sound\scenario\w3i.mp3", "Sound\scenario\w3j.mp3", "Sound\scenario\w3k.mp3", "Sound\scenario\w3l.mp3", "Sound\scenario\w3m.mp3", "Sound\scenario\w3n.mp3", "Sound\scenario\w3o.mp3", "Sound\scenario\w3wa.mp3", "Sound\scenario\w4a.mp3", "Sound\scenario\w4b.mp3", "Sound\scenario\w4c.mp3", "Sound\scenario\w4d.mp3", "Sound\scenario\w4e.mp3", "Sound\scenario\w4f.mp3", "Sound\scenario\w4g.mp3", "Sound\scenario\w4h.mp3", "Sound\scenario\w4i.mp3", "Sound\scenario\w4j.mp3", "Sound\scenario\w4k.mp3", "Sound\scenario\w4l.mp3", "Sound\scenario\w4m.mp3", "Sound\scenario\w4n.mp3", "Sound\scenario\w4o.mp3", "Sound\scenario\w4p.mp3", "Sound\scenario\w4q.mp3", "Sound\scenario\w4wa.mp3", "Sound\scenario\w4wb.mp3", "Sound\scenario\w4wc.mp3", "Sound\scenario\w5a.mp3", "Sound\scenario\w5a2.mp3", "Sound\scenario\w5b.mp3", "Sound\scenario\w5c.mp3", "Sound\scenario\w5d.mp3", "Sound\scenario\w5e.mp3", "Sound\scenario\w5f.mp3", "Sound\scenario\w5g.mp3", "Sound\scenario\w5h.mp3", "Sound\scenario\w5i.mp3", "Sound\scenario\w5j.mp3", "Sound\scenario\w5k.mp3", "Sound\scenario\w5l.mp3", "Sound\scenario\w5m.mp3", "Sound\scenario\w5n.mp3", "Sound\scenario\w5o.mp3", "Sound\scenario\w5p.mp3", "Sound\scenario\w5q.mp3", "Sound\scenario\w5r.mp3", "Sound\scenario\w5s.mp3", "Sound\scenario\w5t.mp3", "Sound\scenario\w5u.mp3", "Sound\scenario\w5v.mp3", "Sound\scenario\w5w.mp3", "Sound\scenario\w5wa.mp3", "Sound\scenario\w5wd.mp3", "Sound\scenario\w5we.mp3", "Sound\scenario\w5wf.mp3", "Sound\scenario\w5wg.mp3", "Sound\scenario\w5wh.mp3", "Sound\scenario\w5x.mp3", "Sound\scenario\w5y.mp3", "Sound\scenario\w5z.mp3", "Sound\scenario\w5z2.mp3", "Sound\scenario\w5z3.mp3", "Sound\scenario\w5z4.mp3", "Sound\scenario\w6a.mp3", "Sound\scenario\w6b.mp3", "Sound\scenario\w6c.mp3", "Sound\scenario\w6d.mp3", "Sound\scenario\w6e.mp3", "Sound\scenario\w6f.mp3", "Sound\scenario\w6g.mp3", "Sound\scenario\w6h.mp3", "Sound\scenario\w6i.mp3", "Sound\scenario\w6j.mp3", "Sound\scenario\w6k.mp3", "Sound\scenario\w6l.mp3", "Sound\scenario\w6m.mp3", "Sound\scenario\w6n.mp3", "Sound\scenario\w6o.mp3", "Sound\scenario\w6p.mp3", "Sound\scenario\w6q.mp3", "Sound\scenario\w6r.mp3", "Sound\scenario\w6s.mp3", "Sound\scenario\w6t.mp3", "Sound\scenario\w6u.mp3", "Sound\scenario\w6v.mp3", "Sound\scenario\w6w.mp3", "Sound\scenario\w7a.mp3", "Sound\scenario\w7b.mp3", "Sound\scenario\w7c.mp3", "Sound\scenario\w7d.mp3", "Sound\scenario\w7e.mp3", "Sound\scenario\w7f.mp3", "Sound\scenario\w7g.mp3", "Sound\scenario\w7h.mp3", "Sound\scenario\w7i.mp3", "Sound\scenario\w7j.mp3", "Sound\scenario\w7k.mp3", "Sound\scenario\w7l.mp3", "Sound\scenario\w7m.mp3", "Sound\scenario\w7n.mp3", "Sound\scenario\w7o.mp3", "Sound\scenario\w7p.mp3", "Sound\scenario\w7q.mp3", "Sound\scenario\Wolf.mp3", "Sound\stream\Aztecs.mp3", "Sound\stream\British.mp3", "Sound\stream\Byzantin.mp3", "Sound\stream\Celt.mp3", "Sound\stream\Chinese.mp3", "Sound\stream\Countdwn.mp3", "Sound\stream\credits.mp3", "Sound\stream\French.mp3", "Sound\stream\Goth.mp3", "Sound\stream\Huns.mp3", "Sound\stream\Japanese.mp3", "Sound\stream\Koreans.mp3", "Sound\stream\lost.mp3", "Sound\stream\Mayans.mp3", "Sound\stream\Mongol.mp3", "Sound\stream\open.mp3", "Sound\stream\Persian.mp3", "Sound\stream\Random.mp3", "Sound\stream\Saracen.mp3", "Sound\stream\Spanish.mp3", "Sound\stream\Teuton.mp3", "Sound\stream\town.mp3", "Sound\stream\Turk.mp3", "Sound\stream\Viking.mp3", "Sound\stream\won1.mp3", "Sound\stream\won2.mp3", "Sound\stream\xcredits.mp3", "Sound\stream\xopen.mp3", "Sound\stream\xtown.mp3", "Sound\terrain\Cricket.wav", "Sound\terrain\jungle1.wav", "Sound\terrain\jungle2.wav", "Sound\terrain\jungle3.wav", "Sound\terrain\jungle4.wav", "Sound\terrain\tf1.wav", "Sound\terrain\tf2.wav", "Sound\terrain\tf3.wav", "Sound\terrain\tf4.wav", "Sound\terrain\tf6.wav", "Sound\terrain\tf7.wav", "Sound\terrain\tf8.wav", "Sound\terrain\Wave1.wav", "Sound\terrain\Wave2.wav", "Sound\terrain\Wave3.wav", "Sound\terrain\Wave4.wav", "Sound\terrain\Wave5.wav", "Sound\terrain\Wind1.wav", "Sound\terrain\Wind2.wav", "Sound\terrain\Wind3.wav", "Support\Support.txt", "Support\The Conquerors - MFill.lnk", "Support\The Conquerors - MSync.lnk", "Support\The Conquerors - NoMusic.lnk", "Support\The Conquerors - NormalMouse.lnk", "Support\The Conquerors - NoSC.lnk", "Support\The Conquerors - NoSound.lnk", "Support\The Conquerors - NoStartup.lnk", "Support\The Conquerors - NoTerrainSound.lnk", "Taunt\01 Yes.mp3", "Taunt\02 No.mp3", "Taunt\03 Food, please.mp3", "Taunt\04 Wood, please.mp3", "Taunt\05 Gold, please.mp3", "Taunt\06 Stone, please.mp3", "Taunt\07 Ahh.mp3", "Taunt\08 All hail.mp3", "Taunt\09 Oooh.mp3", "Taunt\10 Back to Age 1.mp3", "Taunt\11 Herb laugh.mp3", "Taunt\12 Being rushed.mp3", "Taunt\13 Blame your isp.mp3", "Taunt\14 Start the game.mp3", "Taunt\15 Don't Point That Thing.mp3", "Taunt\16 Enemy Sighted.mp3", "Taunt\17 It Is Good.mp3", "Taunt\18 I Need a Monk.mp3", "Taunt\19 Long Time No Siege.mp3", "Taunt\20 My granny.mp3", "Taunt\21 Nice Town I'll Take It.mp3", "Taunt\22 Quit Touchin.mp3", "Taunt\23 Raiding Party.mp3", "Taunt\24 Dadgum.mp3", "Taunt\25 Smite Me.mp3", "Taunt\26 The wonder.mp3", "Taunt\27 You play 2 hours.mp3", "Taunt\28 You Should See the Other Guy.mp3", "Taunt\29 Roggan.mp3", "Taunt\30 Wololo.mp3", "Taunt\31 Attack an Enemy Now.mp3", "Taunt\32 Cease Creating Extra Villagers.mp3", "Taunt\33 Create Extra Villagers.mp3", "Taunt\34 Build a Navy.mp3", "Taunt\35 Stop Building a Navy.mp3", "Taunt\36 Wait for My Signal to Attack.mp3", "Taunt\37 Build a Wonder.mp3", "Taunt\38 Give Me Your Extra Resources.mp3", "Taunt\39 Ally.mp3", "Taunt\40 Enemy.mp3", "Taunt\41 Neutral.mp3", "Taunt\42 What Age Are You In.mp3"]
+	For File in GameFiles {
 		If FileExist(Location '\' File) {
 			++Similarity
 		}
 	}
-	Similarity := Similarity / Hashs.Count
+	Similarity := Similarity / GameFiles.Length
 	Return Similarity > 0.2
 }
-
+DownloadA(Link, File) {
+	WebRequest := ComObject("WinHttp.WinHttpRequest.5.1")
+	WebRequest.Open("HEAD", Link)
+	WebRequest.Send()
+	Size := WebRequest.GetResponseHeader("Content-Length")
+	Size //= (1024 * 1024)
+	PB.Value := 0
+	PB.Opt('Range1-' Size)
+	SetTimer(WatchDownload, 1000)
+	Download(Link, File)
+	WatchDownload() {
+		PB.Value := FileGetSize(File, 'M')
+	}
+	PB.Value := Size
+	SetTimer(WatchDownload, 0)
+}
 ListHashs(Dir, HashType := 2) {
 	Hashs := 'Map('
 	Loop Files, Dir '\*.*', 'R' {
@@ -270,1515 +340,577 @@ HashFile(filePath, hashType := 2) {
 
 	return HashVal
 }
-
-Hashs := Map( "00000409.016", "ddb91d08eb5c56b05128efef8b9e217d"
-			, "00000409.256", "0b333ecaac717983b88a608b4cd508a6"
-			, "clcd16.dll", "4de2636a761f57126da707aef6c9c51d"
-			, "clcd32.dll", "67e0688a28d75e96ec9bdefe5610b477"
-			, "clokspl.exe", "110970ec8701d771e5e5f2e006444933"
-			, "DPLAY61A.EXE", "90108de6dc14266f6a2aafc2d5c1b874"
-			, "dplayerx.dll", "1a3ab80a8b590ddf7550defcba57806c"
-			, "drvmgt.dll", "4e7a44bb1d85490107a72bd3275c29da"
-			, "EBUEula.dll", "d1cfcad7f3ad257beccbf248e043703a"
-			, "ebueulax.dll", "6347d6166e71e52d9fd7f1a559e893d3"
-			, "EBUSetup.sem", "d41d8cd98f00b204e9800998ecf8427e"
-			, "empires2.exe", "c5a1d96f94aad024fa0e3107a994128c"
-			, "EMPIRES2.ICD", "da1363df1e05baa1f561dd5237a08121"
-			, "EULA.RTF", "553a548bad131a53d0ef6bb5630dca59"
-			, "EULAx.RTF", "8ac31105e7da92bab7dd2f80c097d4e2"
-			, "HA312W32.DLL", "ba83d7c4a9750d0edb7accaf17c49b09"
-			, "language.dll", "79ad74a6f7376ddad5b6302a216d2a64"
-			, "language_x1.dll", "eee78c806e695e74dee142c5a5a32499"
-			, "Readme.rtf", "dab52ae4b1b01962e6d130cbaa785d02"
-			, "Readmex.rtf", "1a69a83719ccd5d61af89dad0c177856"
-			, "scenariobkg.bmp", "7b269b77bf8e117dac91ee4d61740645"
-			, "SETUPENU.DLL", "a083c9aa455ce326dfd6e4937e4ec43e"
-			, "SHW32.DLL", "1d96f88ff5f8979409f15eb3d1624b4a"
-			, "STPENUX.DLL", "93bcc25ab45df2a54a6857d49670ae93"
-			, "version.txt", "1718d57986110b6af2dd96b59d3db416"
-			, "age2_x1\00000409.016", "f9cd1ee88597b51565362c06c9a846de"
-			, "age2_x1\00000409.256", "0ab6464d5aecd2529785a3e0b311f140"
-			, "age2_x1\age2_x1.exe", "b1b52d891550029adefd6a0a5c33ecbe"
-			, "age2_x1\AGE2_X1.ICD", "f419505ac95745fcbba6fbf014e54db1"
-			, "age2_x1\age2_x2.exe", "fe3ac4feabf17a91134959b12866b7f6"
-			, "age2_x1\clcd16.dll", "4de2636a761f57126da707aef6c9c51d"
-			, "age2_x1\clcd32.dll", "bc37b996fb9735c19846cb6bf6aae5f2"
-			, "age2_x1\clokspl.exe", "4b0b63831fc6fcf123f46701d96494e5"
-			, "age2_x1\dplayerx.dll", "7cab2138cd97de7be08da97236e8b28c"
-			, "age2_x1\drvmgt.dll", "0406f085cff4674a553df10b99dabb9c"
-			, "age2_x1\FixAoFE.exe", "c444c1b5d369cd76d5cc9c2cce7d8dbd"
-			, "age2_x1\mcp.dll", "af108c8984cc19f9d659a07ebfff3795"
-			, "AI\AI.txt", "20a2e163658b8b7519e7282652ea9c81"
-			, "Avi\Avi.txt", "8b033d24b5fecf8cdafdc98d9ccf7dbf"
-			, "Campaign\cam1.cpn", "bf0105fe3338d250b05b972524289a90"
-			, "Campaign\cam2.cpn", "0907ae3ea2967d6093ef9fc98426482e"
-			, "Campaign\cam3.cpn", "0815457b831b4cf41ae41ff026565071"
-			, "Campaign\cam4.cpn", "826c04f62029c628fa2f1d86ca8f2327"
-			, "Campaign\cam8.cpn", "4b191fdc44724bc0b793de10e8f85a7b"
-			, "Campaign\xcam1.cpx", "79fdc0ed35782882ebce2ce53edf16fc"
-			, "Campaign\xcam2.cpx", "f2447775714e4a83013bdec50288b459"
-			, "Campaign\xcam3.cpx", "15f5bda12342b6c10c915a78864611e4"
-			, "Campaign\xcam4.cpx", "ece1f992731d880e8b0db2a38300908c"
-			, "Campaign\Media\backgrd.slp", "0dc6f7139649622c287c4a5d6bd18b7e"
-			, "Campaign\Media\backgrd1.pal", "3865d082f71ffdab9da924fd43e96571"
-			, "Campaign\Media\backgrd1.sin", "0625029df0b5862bce5f2c98e6239b95"
-			, "Campaign\Media\backgrd1.SLP", "08c38fe778479a2999ecd3a60e57e132"
-			, "Campaign\Media\backgrd2.pal", "41b4b877e307ca37372cb231afa20fca"
-			, "Campaign\Media\backgrd2.sin", "6ffef84accde37925fb450c1e7b317ee"
-			, "Campaign\Media\backgrd2.SLP", "1a97f1c3ab540877bdf0bac8c4d29d64"
-			, "Campaign\Media\backgrd3.pal", "548800457d57ef45cfec82ac0f9034b8"
-			, "Campaign\Media\backgrd3.sin", "ebe43530725866a6c7694b3a6acac9e4"
-			, "Campaign\Media\backgrd3.SLP", "6ed2b89190cf618e0e4d00b5bcd54898"
-			, "Campaign\Media\backgrd4.pal", "448b9ea6e830886a6930e414de3082ef"
-			, "Campaign\Media\backgrd4.sin", "026fe373c425f446f627d509208f6295"
-			, "Campaign\Media\backgrd4.SLP", "50cc668d0f4878f302a8925b7a36e6e3"
-			, "Campaign\Media\backgrd8.pal", "c90f552e5ed1b7b3eadd694956519707"
-			, "Campaign\Media\backgrd8.sin", "9f5fd00fba532fa52abb7514e41dd78c"
-			, "Campaign\Media\backgrd8.SLP", "db96b895c93aac08062cc7dbb07d9fb8"
-			, "Campaign\Media\c1s1_beg.mm", "7adfddc8d86c715f08cfb23af61e0cb4"
-			, "Campaign\Media\c1s1_beg.slp", "c02646ee7369a02daa1b53859c11d836"
-			, "Campaign\Media\c1s1_end.mm", "7f28b7671ba07032924a2f4a3d045659"
-			, "Campaign\Media\c1s1_end.slp", "6d57f431f2a936945b694c9444264c7e"
-			, "Campaign\Media\c1s2_beg.mm", "826b685bf64a115e018b86dd650a7932"
-			, "Campaign\Media\c1s2_beg.slp", "7d642b2c09dd0e6b4704afa7344bd8be"
-			, "Campaign\Media\c1s2_end.mm", "9191f94263533af9802a3e589962588a"
-			, "Campaign\Media\c1s2_end.slp", "9016c441a8bf3e0f56a766b0ab0d9bda"
-			, "Campaign\Media\c1s3_beg.mm", "c39aeb3a34fdc15a7383a69e6b786987"
-			, "Campaign\Media\c1s3_beg.slp", "a4351e779e2ae67ef94ec0c48e2e3338"
-			, "Campaign\Media\c1s3_end.mm", "9c58c6c7ddb41621194403f6c032001a"
-			, "Campaign\Media\c1s3_end.slp", "205bc30860e5c6b0b915eb15e707ae12"
-			, "Campaign\Media\c1s4_beg.mm", "d8583097121f49d668acfe4d0dcb6388"
-			, "Campaign\Media\c1s4_beg.slp", "6e5afcb8d64dd38cd75731334438ff7c"
-			, "Campaign\Media\c1s4_end.mm", "1e005c74c745ba3d2e389a396e0e87f4"
-			, "Campaign\Media\c1s4_end.slp", "b3bffae8563368ad11f0644a60fe1b9c"
-			, "Campaign\Media\c1s5_beg.mm", "3ddc3e4c208387ace009721865856501"
-			, "Campaign\Media\c1s5_beg.slp", "9cd4835c3e8033377602259c4146b6b9"
-			, "Campaign\Media\c1s5_end.mm", "32ef2b56349900e973c325cb229b5c44"
-			, "Campaign\Media\C1s5_END.slp", "c71791559e3b7c64b1dbe3e1b2deb939"
-			, "Campaign\Media\c1s6_beg.mm", "836d97a63e9ac3d3508b37a157c1223b"
-			, "Campaign\Media\c1s6_beg.slp", "676decac26c2a78015985fec1c50a325"
-			, "Campaign\Media\c1s6_end.mm", "e9ab2806da43f15dce80be0da60014f9"
-			, "Campaign\Media\C1s6_end.slp", "65910c081b464eca59283c6fc13ac97b"
-			, "Campaign\Media\c2s1_beg.mm", "c6fc2c8873249157952c9f2564b1bb6c"
-			, "Campaign\Media\C2s1_beg.slp", "cc36916ebcd63180e36c72813214b107"
-			, "Campaign\Media\c2s1_end.mm", "df0d945c771545c39b8688a46996a283"
-			, "Campaign\Media\C2S1_END.SLP", "89360245d659c96b1be8e7c176886056"
-			, "Campaign\Media\c2s2_beg.mm", "7ee2af0ab03bd1e60c0728a6bba06a28"
-			, "Campaign\Media\C2S2_BEG.SLP", "af0844a3235d7cdfdce5c51c66ce6659"
-			, "Campaign\Media\c2s2_end.mm", "0292289b00ba5087f61051c74a606626"
-			, "Campaign\Media\C2S2_END.SLP", "1eabaa74b0961d95507af2e1fc2ee532"
-			, "Campaign\Media\c2s3_beg.mm", "da109a5c717130885ec814e85576f29d"
-			, "Campaign\Media\C2S3_BEG.SLP", "53db3ebed545de21bc42b1d65bcc36c1"
-			, "Campaign\Media\c2s3_end.mm", "bca4d1dd6de6dc4d6c205cc7a7e366c8"
-			, "Campaign\Media\C2S3_END.SLP", "d110ce52de1cecc2ce7692002f5503dc"
-			, "Campaign\Media\c2s4_beg.mm", "1bc9730fa2b9b60ac3aba2a6342bc827"
-			, "Campaign\Media\C2S4_BEG.SLP", "291e3b6640ee99d9446db41325dd68fd"
-			, "Campaign\Media\c2s4_end.mm", "3043838fc1a51d1e75cce3d2fbfd8be1"
-			, "Campaign\Media\C2S4_END.SLP", "d40aaa9f3c599cd4a0d028f27576c9d0"
-			, "Campaign\Media\c2s5_beg.mm", "c7690d2f8cd2c9e5574b6164ff011191"
-			, "Campaign\Media\C2S5_BEG.SLP", "dfad588d2aff1d37d55376471b763f0e"
-			, "Campaign\Media\c2s5_end.mm", "142d009b8ca80e5e218e04859ab168c1"
-			, "Campaign\Media\C2S5_END.SLP", "21bd914f6a5cfcf2fd2e29c11704eba2"
-			, "Campaign\Media\c2s6_beg.mm", "7bbf26d6add5d71ed4c3237d9d3aab3c"
-			, "Campaign\Media\C2S6_BEG.SLP", "c0621fd533bd5c9a9ce0529f529ce4a7"
-			, "Campaign\Media\c2s6_end.mm", "006b5d1504c021042d9ea24b37e04fcf"
-			, "Campaign\Media\C2S6_END.SLP", "eae5026a81028435d96574c85e0e9d03"
-			, "Campaign\Media\c3s1_beg.mm", "2ef9390150089c12126f7c05617668ba"
-			, "Campaign\Media\C3s1_bEG.slp", "1134346695f9dd1142a42423697f00b8"
-			, "Campaign\Media\c3s1_end.mm", "919c816a773cc22d7a3d8435e3d86ea8"
-			, "Campaign\Media\c3s1_end.SLP", "ce27078953b3668ae2226677bac91925"
-			, "Campaign\Media\c3s2_beg.mm", "e77ff425eedb185ebbd68cced518117f"
-			, "Campaign\Media\c3s2_beg.SLP", "a7743131c571530221fd5b5abfef0fbc"
-			, "Campaign\Media\c3s2_end.mm", "eef13f04bd66ecaef9b3633f8614c68e"
-			, "Campaign\Media\c3s2_end.SLP", "8b6ba26cf9a5d33f9b19a548f04d2208"
-			, "Campaign\Media\c3s3_beg.mm", "7c1e8a1c376e6cab8fd8d28fe688b6e8"
-			, "Campaign\Media\c3s3_beg.SLP", "752c58d224d47a527d618d108647b8ae"
-			, "Campaign\Media\c3s3_end.mm", "09cc111dcc170fde169681107dbc5417"
-			, "Campaign\Media\c3s3_end.SLP", "f118f76d3bdcc9cde4f31489cd15d500"
-			, "Campaign\Media\c3s4_beg.mm", "03b7a75e3a944269e68f56433351ab19"
-			, "Campaign\Media\c3s4_beg.SLP", "ce6f4c03227cff4ab3d48cb6585a9a05"
-			, "Campaign\Media\c3s4_end.mm", "3b25185d32af97073470e397a720ad89"
-			, "Campaign\Media\c3s4_end.SLP", "67de7be016f4310684652f0db404e33a"
-			, "Campaign\Media\c3s5_beg.mm", "91b3232fa6aa9fbd53b4b40705f7f40f"
-			, "Campaign\Media\c3s5_beg.SLP", "188b73ee5699a1efb8a0d3a5f992a9fb"
-			, "Campaign\Media\c3s5_end.mm", "6d8f24cea50978d08a6b69ef406998af"
-			, "Campaign\Media\c3s5_end.SLP", "d42f310342c3fd09d08d5efd9f26f936"
-			, "Campaign\Media\c3s6_beg.mm", "9c23227c2bf24dee488affb7d17df01a"
-			, "Campaign\Media\c3s6_beg.SLP", "94763239d176f69791bd69a299f4ca62"
-			, "Campaign\Media\c3s6_end.mm", "efb9ba8ed05a7da47fc9409ffbb7b1df"
-			, "Campaign\Media\c3s6_end.SLP", "86f655fc532c4236e250cc9b891947d2"
-			, "Campaign\Media\c4s1_beg.mm", "b7c9197c1d9f51ba6101958ef29c1c69"
-			, "Campaign\Media\c4s1_beg.SLP", "baf73cbcdfdb85ccbd7c40fd83d57dde"
-			, "Campaign\Media\c4s1_end.mm", "77724e7ff32d7ac0b8c11133eb024fe6"
-			, "Campaign\Media\c4s1_end.SLP", "3298856125c3f05ea5a9ffc65fc2ca9c"
-			, "Campaign\Media\c4s2_beg.mm", "b740f5e6600eadad33e206f7c5a88788"
-			, "Campaign\Media\c4s2_beg.SLP", "b164749a01a986f3fb258c8547afcd88"
-			, "Campaign\Media\c4s2_end.mm", "2a4d27c730a0f95edc91777003143d0f"
-			, "Campaign\Media\c4s2_end.SLP", "c27d5e398783c231d02c783dbde835c4"
-			, "Campaign\Media\c4s3_beg.mm", "02abde80ae9c9247de456fe98abf1d72"
-			, "Campaign\Media\c4s3_beg.SLP", "578bc4b633fcdfef76a4192c81619b02"
-			, "Campaign\Media\c4s3_end.mm", "57e4c1dbc26c76366ddeb313550e0b4b"
-			, "Campaign\Media\c4s3_end.SLP", "06bae363dccee296bd457fa577574e12"
-			, "Campaign\Media\c4s4_beg.mm", "c8c0ac57c60adc8917a4e7dbe4641d82"
-			, "Campaign\Media\c4s4_beg.SLP", "5fb796279567e1091539d6244b76d81d"
-			, "Campaign\Media\c4s4_end.mm", "357b6ad613c2d59af74a72c643d6a954"
-			, "Campaign\Media\c4s4_end.SLP", "810ad06e6a1fb9a5c09be7c873c37f47"
-			, "Campaign\Media\c4s5_beg.mm", "dd61796697adc5eb83da46c166ca96a8"
-			, "Campaign\Media\c4s5_beg.SLP", "c46c60aeb4b2812d9262840b29b85a34"
-			, "Campaign\Media\c4s5_end.mm", "90ea1d20f896c831adc4d4429b41c865"
-			, "Campaign\Media\c4s5_end.SLP", "0ff08fa36e0607fb0fb9f274371feff1"
-			, "Campaign\Media\c4s6_beg.mm", "ca8d186391656b6f919174b3c0365bd3"
-			, "Campaign\Media\c4s6_beg.SLP", "47bb291934335adc3d5cb559726d281e"
-			, "Campaign\Media\c4s6_end.mm", "f1e9b1c18935deb379935b13432aa85e"
-			, "Campaign\Media\c4s6_end.SLP", "852e80967aa891d0af7ebb79a9558ab2"
-			, "Campaign\Media\c8s1_beg.mm", "53e6358e9daa630e8ebab9ee757beb91"
-			, "Campaign\Media\c8s1_beg.SLP", "45c82bf804cb3db1d59396bb10cb99e4"
-			, "Campaign\Media\c8s1_end.mm", "9de1a18435a388fc1de37962ec184f1f"
-			, "Campaign\Media\c8s1_end.SLP", "cb2640b002167dcd78684c099e7c483d"
-			, "Campaign\Media\c8s2_beg.mm", "f6e3f41a021ec76b65dc95f26841c41e"
-			, "Campaign\Media\c8s2_beg.SLP", "3a3a63d4b8a3ef1db3c7e17723611a00"
-			, "Campaign\Media\c8s2_end.mm", "e055654e0166c848d4b0060903e1b33d"
-			, "Campaign\Media\c8s2_end.SLP", "0a9ec22a3a3100230d28bf48ebadbb55"
-			, "Campaign\Media\c8s3_beg.mm", "c4438f4b486a49639cffb236f719a006"
-			, "Campaign\Media\c8s3_beg.SLP", "b073c43d756dac37df03efe669f5df2c"
-			, "Campaign\Media\c8s3_end.mm", "51d47344289224d45df7508510a66fe7"
-			, "Campaign\Media\c8s3_end.SLP", "8017ef244f557ffeb94b1c2b82824eda"
-			, "Campaign\Media\c8s4_beg.mm", "7f1272785f728a733d744b3e9aeadd26"
-			, "Campaign\Media\c8s4_beg.SLP", "449d4a158d9c3be112043344250a4072"
-			, "Campaign\Media\c8s4_end.mm", "c1c0c77ad8be1c4a699912567d3d9fbe"
-			, "Campaign\Media\c8s4_end.SLP", "2cc4a68ab97698dc3646e40d971e07e1"
-			, "Campaign\Media\c8s5_beg.mm", "6579fe0ea36052301ed476e518ada25a"
-			, "Campaign\Media\c8s5_beg.SLP", "a2e22e98b6719a172f06f81c6e94ca94"
-			, "Campaign\Media\c8s5_end.mm", "46cd6d53dd869defbce8879d71939ed3"
-			, "Campaign\Media\c8s5_end.SLP", "24b4c68c9488bac76fd7ff6b85995f1c"
-			, "Campaign\Media\c8s6_beg.mm", "1c377d574ae09d75249138c6c9ccc0f2"
-			, "Campaign\Media\c8s6_beg.SLP", "97498d7065cf27c747deea958e02f6b8"
-			, "Campaign\Media\c8s6_end.mm", "c465bef783213010672d1e90241cd3fd"
-			, "Campaign\Media\c8s6_end.SLP", "fe23fc655934fd37e6de51d388350cf5"
-			, "Campaign\Media\c8s7_beg.mm", "1dffe512e2fcb6918da7f850ea124c2b"
-			, "Campaign\Media\c8s7_beg.SLP", "953c2870c805b7180f534161d0867e5a"
-			, "Campaign\Media\c8s7_end.mm", "77a20c3acdfbe25dae94296c137e910d"
-			, "Campaign\Media\c8s7_end.SLP", "fa02e44e846aa1962e924b8adf903e3c"
-			, "Campaign\Media\cam1.bln", "04c09225da71382df1c9e4f83b124f09"
-			, "Campaign\Media\cam2.bln", "edeafd4a002c8d2a59992b07e919121a"
-			, "Campaign\Media\cam3.bln", "db8495f32754f1e051d6ffeef7b81141"
-			, "Campaign\Media\cam4.bln", "beec43a98dad6d62365394a970f9f398"
-			, "Campaign\Media\cam8.bln", "16b0a2a162b656d37db75abd35763582"
-			, "Campaign\Media\Intro.bln", "b063d98d54d2dbcb98e9103838472878"
-			, "Campaign\Media\Intro.mm", "73cab26f00c21023e7f71634129e010b"
-			, "Campaign\Media\Intro.pal", "fcde989a04ad3bfb9c8b134aff81bf48"
-			, "Campaign\Media\Intro.sin", "b6d1fdc33b274acaf164f43315302197"
-			, "Campaign\Media\Intro.slp", "4538df8a389c449394be69e3bf11cb61"
-			, "Campaign\Media\Introbkg.slp", "f4d23cc525e29a701136e415e74e2eae"
-			, "Data\blendomatic.dat", "e04a3340136857580f3eae6a8eb6d23d"
-			, "Data\BlkEdge.Dat", "a358e4da861f6a534fad04e93a8a5fc3"
-			, "Data\closedpw.exe", "6295c1c28ab5bbba657d448308830dfd"
-			, "Data\empires2.dat", "89ff818894b69040ebd1657d8029b068"
-			, "Data\empires2_x1.dat", "8358c9e64ec0e70e7b13bd34d5a46296"
-			, "Data\FilterMaps.dat", "bd6acf96259c3249ea6d518e1a510129"
-			, "Data\GAMEDATA.DRS", "be574545e247b85a196109836a1f9d44"
-			, "Data\gamedata_x1.drs", "f41c418333e624b7a1077ad166f9dcb0"
-			, "Data\graphics.drs", "d3e613dba504de1bd0cf3eb38701edc6"
-			, "Data\interfac.drs", "8bba3dce3d5086e6f4c6ff88073bab90"
-			, "Data\lightMaps.dat", "755dbdacdf6fb113d82a07ad0523246d"
-			, "Data\list.cr", "04425388c49f3fcfe749100bd8153ed6"
-			, "Data\list.crx", "8ed1783abfd46e194427fd51a40fb51f"
-			, "Data\LoQMaps.dat", "b0b09086c8b44b987b9fe16a529fb2e8"
-			, "Data\PatternMasks.dat", "724000b967797011926f085c3729c6a0"
-			, "Data\shadow.col", "5e2ca0e30d2fd2686ec85228d98a6d8d"
-			, "Data\sounds.drs", "2ccb0c732632eec7a0fa3b2bac07353a"
-			, "Data\sounds_x1.drs", "003dd5a51d9162fd0191b923757ee137"
-			, "Data\STemplet.dat", "17f9869001601fc29cb4374f80ef7074"
-			, "Data\Terrain.drs", "05c2c6134c61da8edb25bb0e9c2cd81b"
-			, "Data\TileEdge.Dat", "d87aaa4f86ddb40bd54e493507098aa4"
-			, "Data\view_icm.dat", "e6cbc7c64d3ee7c8c6d960dba99634cc"
-			, "Data\Load\Load.txt", "51f0d9cdfd51d5e7f8a3394cf1060872"
-			, "Games\age2_x2.xml", "21f884da45d11046e98c8a5507f48557"
-			, "Games\Forgotten Empires\Data\empires2_x1_p1.dat", "56efc5b01e4e5ea5bac35b696a05a24e"
-			, "Games\Forgotten Empires\Data\gamedata_x1.drs", "bc0c62990f090a2165bca114dcbbc850"
-			, "Games\Forgotten Empires\Data\gamedata_x1_p1.drs", "4fdadb9f0f7a41acbda7bf185e533196"
-			, "Games\Forgotten Empires\Data\language_x1_p1.dll", "39f6293b03e0bd05b16fa606f9d1ee10"
-			, "Games\Forgotten Empires\History\Incas.txt", "1595daf601f7e0c5d92bb4a265c4ecd1"
-			, "Games\Forgotten Empires\History\Indians.txt", "c7e5f384b4408d717a747f83f15565ab"
-			, "Games\Forgotten Empires\History\Italians.txt", "ef7673c9686484ca74a242fd361e8368"
-			, "Games\Forgotten Empires\History\Magyars.txt", "17262c0ea1480471dc007fbe1cd7cfad"
-			, "Games\Forgotten Empires\History\Slavs.txt", "e6d6498b3e5541f58148d2182d645cfe"
-			, "Games\Forgotten Empires\Scenario\'Legionnaires on the Horizon!'.scx", "ce456012e14000821d4f775caa4a31a6"
-			, "Games\Forgotten Empires\Scenario\24th of August, 410 - The Sack of Rome.scx", "cae94b063bd0b696fabac417b508dc8b"
-			, "Games\Forgotten Empires\Scenario\Alaric.cpx", "c2714bcea0e1519f576b1ac41d998075"
-			, "Games\Forgotten Empires\Scenario\Cysion - Lushful Forest.scx", "9994bc2cbcb8139fd4a8b704ab10f343"
-			, "Games\Forgotten Empires\Scenario\Early 410 - Emperor of the West.scx", "34abea26b01edbad5d62ab9f183524f2"
-			, "Games\Forgotten Empires\Scenario\Fishing.scx", "f05d0c059c5c7620d822ee4df7142689"
-			, "Games\Forgotten Empires\Scenario\Last stop before Baghdad.scx", "b1fb2e27c01983ebfaeaa157e5a31130"
-			, "Games\Forgotten Empires\Scenario\Prussian Uprisings.scx", "6018a546c8ce6b8c89b1a93345720162"
-			, "Games\Forgotten Empires\Scenario\September 408 - All Roads lead to a besieged city.scx", "1af86d21e1b494b85bb81d9d21bd7708"
-			, "Games\Forgotten Empires\Scenario\Siege of Haengju.scx", "01173754b0e8b806979a894d3307d696"
-			, "Games\Forgotten Empires\Script.AI\Barbarian.ai", "d41d8cd98f00b204e9800998ecf8427e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian.per", "08801025a1fa20a841e7b56d879feb39"
-			, "Games\Forgotten Empires\Script.AI\Crusade.ai", "9e4d93605911266fca73b5103b26adf5"
-			, "Games\Forgotten Empires\Script.AI\Crusade.per", "fa38608a9255bf884af64e9f0a5cf665"
-			, "Games\Forgotten Empires\Script.AI\Principality.ai", "21f3e3b8fd0d92d52a8083d790c084d8"
-			, "Games\Forgotten Empires\Script.AI\Principality.per", "6a3671381f7d750729dcd312bf859b42"
-			, "Games\Forgotten Empires\Script.AI\Promi.ai", "d41d8cd98f00b204e9800998ecf8427e"
-			, "Games\Forgotten Empires\Script.AI\Promi.per", "5b47fa6462db2992939a15a7602333e9"
-			, "Games\Forgotten Empires\Script.AI\resign - AI Ladder.per", "2c04fc564920d1da810c527b9ae18e20"
-			, "Games\Forgotten Empires\Script.AI\resign - land map.per", "8cdf7a198e5e7bbfdd601b72585c871d"
-			, "Games\Forgotten Empires\Script.AI\Standard AI.ai", "d41d8cd98f00b204e9800998ecf8427e"
-			, "Games\Forgotten Empires\Script.AI\Standard AI.per", "fff28f032be0c0395586264823fca433"
-			, "Games\Forgotten Empires\Script.AI\The Horde.ai", "d41d8cd98f00b204e9800998ecf8427e"
-			, "Games\Forgotten Empires\Script.AI\The Horde.per", "0320068aa86b6de081e1a6a72cc456ed"
-			, "Games\Forgotten Empires\Script.AI\The Khanate.ai", "a5b03872e439afbae56f744635cf6f2f"
-			, "Games\Forgotten Empires\Script.AI\The Khanate.per", "3f496e8589cbfbbff7fc56d7a2dffe78"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\AztecSuperRush.per", "2e983d4ea98686f3666babd6ab90d852"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\CA.per", "9f3039a92e1e2341d59639aa8c5933f9"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Castles.per", "5d22b6951309777eb6cd9c789c6dab44"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Commands.per", "a52fcdc4a0f02797e093f3e54c81e0d5"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\CommandsTG.per", "2de95cd3b1cb2d7b308dcba2f777a328"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\DeathMatch.per", "d1a38c978faa8ab95b4b584d87d807b5"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\DMConstants.per", "4b82d4df7dea5a117892113fdb083746"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Drush.per", "9d374579a649ea9de501bddd2b5d3e05"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\FlankAggressiveness.per", "bf0a9b2caf12e3dc706284a89c1ac30d"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\HardestCheats.per", "f1845130e2776bdae8bcc87f199c26a4"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\HeavySkirms.per", "4d44a8e939873cfbc962b8decd4f59c6"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\IslandsFireEco.per", "cb53dc49f0269a3a3f2c9ce2bbfb4217"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\IslandsGalleyEco.per", "c909400f80f93eeb8b8b3dd9b95232cf"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\KnightRush.per", "5eb96290307995d3509a7dd2d09eb1ec"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\MayanEagleRush.per", "6bc2a17723912d8b3efb0dd00dbdc92b"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\MIX.per", "bb27990fd8d7731f9738c4f2b8b99361"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\MonksAndTrebs.per", "a0cbb56744f841592f93a62093403988"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\OnlyMeso.per", "2f4542069455851d5b82347fd7b48eca"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\PocketAggressiveness.per", "3f33d6bc2f688e378288e0f367f8ae80"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\RaidTheCamps.per", "02be493dfbe052574b4ddfff4f268b9e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Resigning.per", "754f7ee56895faae659ae31b99b5d011"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\RuleBuffer.per", "2d7c2ff3d63b46521ce61adb3236559e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\ScoutArcher.per", "28a1aad03258e9de83801bde7fdfe1b4"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\ScoutDefence.per", "199836b32e854813bb3e7782e5007b78"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\ScoutSkirm.per", "96be19b38330bcc9933b71153121ff43"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\SLING.per", "3e6ef9634c49a070bbb9cf008035e340"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies1v1.per", "aacdf8a5b64ad43a232b108a92a5daff"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\StrategiesTG.per", "804dacd825fd5fd0fb554995763fe191"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\SuicidalKnightRush.per", "b296bed0e30b69a87adb78b63416dbeb"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\TheAntiCysion.per", "efc9449c67cf18efa673c09539659b7a"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\TheGreatWall.per", "73edc631ee3722745297a06f782a3c60"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\TheGrowlOfTheJaguar.per", "24a825fc727f62f88515e443fd71dfa0"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\TurkSaraExtra.per", "0846e08737739904c3f0f369427f9d72"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\UnusualSwitch.per", "01325a8afee7f1339e0d1dbe3d680db8"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Uusi tekstiasiakirja.txt", "d41d8cd98f00b204e9800998ecf8427e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\WallAndBoom.per", "bc20968da4bff34449bb2c2327789c17"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\WonderAssault.per", "f0c6801b963fe523a297dd7abccbb30b"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\WonderVictory.per", "226b8dbc8ccf3a8b15f3ba989dfa896d"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\AddedDrush.per", "a57c13f89e2991196a36e3931d51fb73"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\ARCHER1.per", "8c9e20d266418833b0398e6d8b8f7b7c"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\ARCHER2.per", "f2072f814dcaf1c331e478704f757879"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\BOMBARDMENT.per", "83fb531e8a80177825bbf21343863d5e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\CASTLEPUSH.per", "6f1ded15dc1222a5a2270d8756cf2e49"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\CASTLESLING.per", "4b7eea518fc0e276aab8c9851bd7a3c2"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\EternalDrush.per", "970cb828dc05952aca6a2ed0860c3ef7"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FastEagles.per", "9740ca49378a6f16ca0d6c52f640850e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC10.per", "69889d62f249968dbfd8a44833b460d0"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC11.per", "5745f3f5c93fb33e098bbe9805a192a2"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC12.per", "e24fbfdab213517337f2f8b06f617975"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC15.per", "0a67b36b60ea23140a3d7c10cf829f23"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC16.per", "eec73599d63102d705aa1caa42c6cfc4"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC17.per", "8839c791f7de91b6771307a10795654a"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC2BOOM.per", "e7bc477526d23c6a99881ba96feb4491"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC2FI.per", "31e24698e8b885e95e38779c89abf29b"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC3.per", "f251a80d332bc2b8d920f4818277c626"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC4.per", "7fe614b26b1517b81ed0985af4f16eca"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC7.per", "3c28b2aa9d288ffe420999553d615433"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FC9FI.per", "7ff0bed6c90ddb21013f4030afb05a55"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FIARCHER.per", "3211ef604385f0ec7232289cb677864e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FIMONKTREB.per", "51d260ffea13e296948908c871fe08eb"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\FULLSKIRM.per", "b6a76c44e44aa4b9f5a6a99aaa06baca"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\JAGUARS.per", "dc2c415acea542af64014045abe64272"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\KBOOM.per", "6700d27aa599121f736caad93f0cb606"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\KNIGHTARCHER.per", "0c86ad30dec32c307133e1eaff3e179b"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\KNIGHTBOOM.per", "d8965099100e33fba84d5729b14b9ebe"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\KRUSH.per", "80c9072d42188f38c12b479ddb2ec98b"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MAA1ARCHER1.per", "cb406f7f84b224a73a276081f33ececb"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MAA1ARCHER2.per", "e05a52072686c3922cf6651b5b7d48d5"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MAA2.per", "afe20301ebd020ba6fc3929d99e3d772"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MANGOPUSH.per", "e3e29f9fa8509921fd2f0a1672e0d48c"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MISSIONARY.per", "11a62a0f4e9a25fbcda21deaa50812b7"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MONGOLBOOM.per", "c20bedfefd1583a6efb451e3a9825407"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MONKBOOM.per", "d7866adfc39d49a16de1fd7382af5834"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\MUSH.per", "1358937a0e2c549201b74468221eae9b"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\PocketWaterFC.per", "19cadaa6649ef4d0f9f2fb711e84e9ea"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\RANGEDBOOM.per", "2fabc0caa71cbec2c9065aae26efeca6"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SCORPS.per", "f9de4da33444bffcae19f5f961087c17"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SCOUT1ARCHER1.per", "ee5a6c8a6383ee9139c7f6389e7992c0"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SCOUT1SKIRM1.per", "117448a89f0898d502759b575a506013"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SKIRMBOOM.per", "eead71720c557b20a504c2f8c9267c32"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SMUSH.per", "c21bc19f6bb0b4f2f5c0fb9f49a8c055"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\SUPERSCOUTS.per", "547669e5b6b179af37579936cad9f446"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\TRASH1.per", "68e72c98054e1949c271becd346424a1"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Turtles.per", "a8749c2fac821981dd3d1066fb8dad47"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Uusi tekstiasiakirja.txt", "d41d8cd98f00b204e9800998ecf8427e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\WALLS.per", "a9cb818357556bd4b2e026d340725040"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\WarElephants.per", "10306af5a57917213c99b6942f3cfd44"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\WarGalleys.per", "b2c3b2e27217095223e2671edc798be5"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-camel-cannoneer.per", "62833c1b09e84af5abf8ce100d6861b9"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-cannoneers.per", "799a903f5ea8b84b1dc4e6457f5b9a08"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-champ-cannoneer.per", "68d78c692b135a973814408224da2c92"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-champ-turtle.per", "1881aa1dd671301bf398f594c797c8ea"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-champs.per", "b1a361c3aa1a3d9f856f07df666874a7"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-eagles.per", "5c78149e9957b0ae2e57b3d920843f4b"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-halb-husk.per", "ee8e664ef6ca9af51ddd9f0fe2b5dc6c"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-halb-scorpion.per", "fa2985be51c4b26d41e80d2e8b09b1b5"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-husk-champ.per", "a41e1a91810f49ef1bf9ecc0c0d1113e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-pala-turtle.per", "9dc8299fe81a7476ef489a4dece12c7c"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-palas.per", "93363168350f06a3c22059a9189a7c7b"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-UU-champ.per", "d7f30db96d7bcd1d0565b787c36c12d0"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\dm-UU.per", "15645c387e93a1675284c25a83e01358"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\DM\Uusi tekstiasiakirja.txt", "d41d8cd98f00b204e9800998ecf8427e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set01.per", "faa28ce2cc09f7dacc9ae074fa95a448"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set02.per", "76197cb986e70ef7b42a9d0d957da413"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set03.per", "2096cb5941bb9c6e59993afd5f58989e"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set04.per", "3b484fd12ed03e6c6362ddf853424271"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set05.per", "a9e71e6d33ef6ee1d99c838f314d9452"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set06.per", "c46f75cbbc20bdb4a9f90eadb04f3e88"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Set07.per", "82717ef1c36e5df91498467e712db252"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\SuperTraitor.per", "4fcdf188bce43af3cfd1b48b6e91ad2f"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Traitor.per", "4b41d574dcb8307d35bdc2d3f2728a1a"
-			, "Games\Forgotten Empires\Script.AI\Barbarian_2.0\Strategies\Personality\Uusi tekstiasiakirja.txt", "d41d8cd98f00b204e9800998ecf8427e"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Amphibian.per", "7c93ea667c6fb82639b09cac9398d94c"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Army Selection.per", "f7f83d708c2eec5ffe6cc4c71c662dc3"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Attack evolution.per", "7c92b73625d9c5ce2ee34c995e61fe00"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Attack rules.per", "e9b40bb8132b4a53f58d92b6a7366355"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Battle behavior.per", "ea40adc16105f61cdf2b62003cfb8a8d"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Boar Hunting.per", "e5a40b79e21c0d2da27814d5befdcee6"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Alpha.per", "73c131b3dad73a4c460a1b6c315ef85d"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Betha - 1c.per", "2c6c452614a7d7e9ce31f247ca549077"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Betha - UP.per", "d7d150fa85b8d82814a826144a3c6009"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Omega - 1c.per", "3e658e8e3718c0c6392c194ef3231aa9"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Omega - UP.per", "8a1decbbcac0d6ee4d737cf9da2495a7"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Zero - 1c.per", "14c8e6e624565e70d2cb140f9438cfcc"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Buildings Zero - UP.per", "d2e814975149ff983aac1643bd60248e"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Calculate gatherers wood-marathon.xlsx", "e533fb3460440f721ffab4991dbc9079"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Camps - 1c.per", "f67c05d93ac2b37a9d771c502f67d937"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Camps - UP.per", "304f1596ec0b1a4a43a555e55d600d8c"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Chat.per", "959a28f3ea0038d5ad426239754f10c4"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Constants FactID.per", "ee2cfb13c019dccec26d67683f3d22b6"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Constants for civs.per", "44ab5633f4daef0ab768f55100af415a"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Constants.per", "808d301567b45b8d0f60a54aa5719f4e"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Control Upgrades.per", "8dcf04615bc67e5b17092ad06074bc39"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Extra Upgrades.per", "4afeac5eb95c5de3acf31b03af71358f"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\FC Archery.per", "0e72e7fbd2fc88fdcbc04c501473b805"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Archery-3.per", "9ea7d4c71c54f56f6e154fa7f2097973"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Man-at-arms.per", "85b6b9151f2ce2b9c3392380b1961672"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Market Scouts-Archers.per", "fcf39a3e9b10794bbe8b26599e96b00e"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Market Swords-Archers.per", "dbf9fcb291e487e08e64ced97d1b46e6"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Market Swords.per", "d7b823bc1492822f935f2c6516f666c8"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Scouts-Archers.per", "150d0856402b97d8b43c5c2744a23241"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Flush Swords-Archers.per", "af611431f96404ad187382bf9db72b80"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Forgotten Empires Constants.per", "dd779a95ae6d1fbae07e0966f62117cc"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\g-jollygoal-0.per", "1d6649435fe60845ecc314c81f8f68ff"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Gatherer percentages Dark Age.per", "709b17f967e557661554364f484dd434"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Gatherer percentages Late Game.per", "174e29c90017e02150a15691d34ce993"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Gatherer-Dynamic percentages Late Feudal.per", "217fbe0a696d3667ec2dad5e506b8938"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\General Economy.per", "dfc88339ad6ee806a60b7dd51a12a236"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Initial strategic numbers.per", "6a14b965af69a37707652b059d3a50d6"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Main Upgrades.per", "52f8097f639bec08c377abbb6ce2909f"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Marathon XLS.zip", "244d2a3b4ed0af15208614f564cc51ab"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Market rules.per", "75037de3fec64623adc8854a29453cc9"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Military superiority 2.per", "c4ecbeabbfc7ae675e517df3e9ad3d0b"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Military superiority.per", "94a15d09695ba5ab14429f4a717fb38b"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Navy superiority.per", "eda558722df30da992abe1fb22a525da"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Obsolet strategic numbers.per", "f38ed2af524a61c7fd2fc306c0ff3dca"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\resign - AI Ladder.per", "790f83dd18482e31db86e299af61c02e"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Resign - Human.per", "0a3855d1c7bf04363a2e1e8c412658df"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Sheep.per", "ed048ffbde5e6440fbb715a929b3689c"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Archery-3.per", "21c0fd56115290f7cc33d6f9cf587c13"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Man-at-arms.per", "0440e46bb4f252eb02ae5548e52b6ee9"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Market Scouts-Archers.per", "289ac21b29a35b616380b9746d8bfd3b"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Scouts-Archers.per", "d6fb56479b0cbb0ef4622ea05135d779"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Flush Swords-Archers.per", "039821e6c41a43af7cf631d77c60f523"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Trush Scouts-Archers.per", "e15f56a6279a248790cf2555e1c9c92c"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy Default - Trush Swords-Archers.per", "bf5f98ccf43d8c3fbc4fa5cb491a8778"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Strategy selection.per", "7ba096cd652e4f6ad9dc73eafc1ffa47"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Threat rules.per", "d672568c5c61f2513f1332e7ec41422b"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Trebuchet.per", "ef94d751c529f86686a3dc3af453c11b"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Tribute.per", "70a238f9d5ee31bb575ba21032262413"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Trush Scouts-Archers.per", "e61c7a143facd86cf7b66a68c7bcf5c2"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Trush Swords-Archers.per", "0001ac8b1de3b3f3c3091cf77248e8da"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\TS Building.per", "7cc2aca9aba4e9836b334792693f3724"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\TSA Defensive.per", "8521839a1df0f9632a41c01332dab4b7"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\TSA.per", "71af61899759216441e2154dc4fab0e5"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Unit Training.per", "f96eea4ee6e915d1550e0f2090faa9ac"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\UP initialization.per", "c423098eb5c12626558253c3824d2370"
-			, "Games\Forgotten Empires\Script.AI\Crusade 4.42\Wonder Race.per", "f3f2ee0c4529f39b67b83a42c81310b3"
-			, "Games\Forgotten Empires\Script.AI\Promi\aofe.per", "e57c08f21d584915d3e5095ce27f22ac"
-			, "Games\Forgotten Empires\Script.AI\Promi\boarhunting.per", "48d1f8d46593e82f9d9725c165fc3d4d"
-			, "Games\Forgotten Empires\Script.AI\Promi\buildings.per", "29b0524b85e0f057271181fc175086dd"
-			, "Games\Forgotten Empires\Script.AI\Promi\Const.per", "d7af419cc8fd9998121fb1c681a2e015"
-			, "Games\Forgotten Empires\Script.AI\Promi\gatherers.per", "c045e4ae458a19d0d2c4208ae1fe5b5b"
-			, "Games\Forgotten Empires\Script.AI\Promi\General.per", "4a77964dbb3201a2d23fd90681bf8b49"
-			, "Games\Forgotten Empires\Script.AI\Promi\Init.per", "ad32055cc58aae3d2720b12090b44824"
-			, "Games\Forgotten Empires\Script.AI\Promi\interaction.per", "d40ac242967da64c543ac4101427c36e"
-			, "Games\Forgotten Empires\Script.AI\Promi\researches.per", "07477269b290cf44d624bca89f2d2142"
-			, "Games\Forgotten Empires\Script.AI\Promi\resign.per", "5833118998fd86d185882a6b4f395f7d"
-			, "Games\Forgotten Empires\Script.AI\Promi\Teamsuperiority.per", "36262f3777aee363f24fb819a6fd9cfa"
-			, "Games\Forgotten Empires\Script.AI\Promi\threats.per", "949511b49ab0c9217acb375087fc6105"
-			, "Games\Forgotten Empires\Script.AI\Promi\trade.per", "5b33e74ee34e9ac1840f8464ed3d9334"
-			, "Games\Forgotten Empires\Script.AI\Promi\TSA.per", "b4010569425f175fd85a7a9ea031e7ad"
-			, "Games\Forgotten Empires\Script.AI\Promi\units.per", "6ac540015a264f41e54c054a6be15b59"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite ai petersen rules.per", "f9e006dc6731ae5de29e95fee68066b0"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen castle.per", "c78fc96799a0f490f4e9c518bf8d60ea"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen civ loads.per", "0d27bacdc1598cadb26af178cd2e9f92"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen constants.per", "8b19ccd267e1a43ebf7dd33f8121cc98"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen deathmatch.per", "c6df9846ed9e2d1147529ef79d5821bc"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen difficulty loads.per", "8286bd00fbdbf2ea618cd43aaeb4ad79"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip boomer.per", "44a6b2b3b0289786d97a159fde61d2b2"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip bully.per", "d01dff55c9ee9d7e2a5fa32c72cff939"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip feeder.per", "5ae439cf4135df80ef53ae640d82eeac"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip insult.per", "af372927fd1430cf39d3197325594412"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen dip liar.per", "43752fb6de20d58c2cdf57c304320e3c"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen diplomacy.per", "931b6cb9e697f54b8450ab06128b90f6"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen fishboat.per", "1e57fe9cc406fe7b4d62cd2cf12bb3e9"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen full tech.per", "38ee8cf5c412ab1438d8a8442eea4b34"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen gather.per", "96c5f9341ecbe3904450ba621236640d"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen groups.per", "043c9723121c7e33aa0231cb34ca1fbe"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen map loads.per", "3fdecd386423ee7c797f589670ae8e5b"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen market.per", "443a792cd567a1c96a4c5c34e22171b6"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen resign.per", "43fe779375a1180d08edf86c7b91431b"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen rush.per", "151ff9c57dac229f70118b80b41f4651"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen supplement.per", "b495f89ec5b518ad382be0c806f1b173"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen tower.per", "468d011a415814125a34b69c9c9a4131"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen upgrades.per", "dbcb437ec6244e497ef71cd57c30b473"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen warboat island.per", "3663dbfde2543c949686c2f6c0b41a2b"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen warboat.per", "29bb18dcaa7b6f8a623d01793b5b903c"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite petersen wonder.per", "6fd021cb95fa7a0d612ec25b34f3a8b1"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite randomgame.ai", "d41d8cd98f00b204e9800998ecf8427e"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite randomgame.per", "1b6b65a9c1340d1774b38664f3a561d9"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite wonder kill.per", "a4ff77f7cbaef7dfc1f36fdc51864f67"
-			, "Games\Forgotten Empires\Script.AI\STD AI DM FIX\elite wonder rush.per", "2ea88ead1c3367933c1c8a254be74b3d"
-			, "Games\Forgotten Empires\Script.RM\Acropolis.rms", "a05f390009616e339c68e86e7bada8c4"
-			, "Games\Forgotten Empires\Script.RM\Budapest.rms", "b2478db8a76e1fd9e9a77ccf8f67d282"
-			, "Games\Forgotten Empires\Script.RM\Cenotes.rms", "d38f99eb9ee17fb3185aaca4134f163f"
-			, "Games\Forgotten Empires\Script.RM\Golden Pit.rms", "8c01f351ca90a728537dbfe858bae822"
-			, "Games\Forgotten Empires\Script.RM\Hideout.rms", "573561df4ce77783f2f2acc0ea00325a"
-			, "Games\Forgotten Empires\Script.RM\Hill Fort.rms", "46a12c3f692263e8f8916ab8c02d2786"
-			, "Games\Forgotten Empires\Script.RM\Land of Lakes.rms", "4f93228a465cd135070dd8fe4de63ff2"
-			, "Games\Forgotten Empires\Script.RM\Lombardia.rms", "e344bda972684ca66f473f4a9ccaea76"
-			, "Games\Forgotten Empires\Script.RM\MegaRandom Beta.rms", "f2321b784143ff985dab8f6fa343f917"
-			, "Games\Forgotten Empires\Script.RM\Random.txt", "e46cd19ac20e557f2eed12e2196e21a1"
-			, "Games\Forgotten Empires\Script.RM\Steppe.rms", "2a5d06bd0d183c966cde5fce46a582fc"
-			, "Games\Forgotten Empires\Script.RM\Team Arena.rms", "aee854b3a7df04d9573a702fa2cdfdbf"
-			, "Games\Forgotten Empires\Script.RM\Valley.rms", "8a2ce77a235d6b080887fcbceace56c0"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 1.mp3", "8a1edb9e14617d4252d3b6fb4373178e"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 2.mp3", "0dd96030ebfbf502b54b54bb7356e992"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 3.mp3", "e8c31191359e458020a83b256e4e2fa9"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 4.mp3", "5ed4e272fa4289e1c81032224d596c45"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 5.mp3", "226ddcbed8503274e256b0e9d8ea9cbf"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 6.mp3", "0aa737cf99ad4cfe6e069cc60d573efb"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 7.mp3", "36da11ca22dca50a215a9ed220cf3358"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 8.mp3", "56ae967419b2d1dad63c3ffbf7797490"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Alaric 9.mp3", "b0cdc7a89e2411840504b2c31b8ca92a"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Athaulf 1.mp3", "f3db730af247fbd1d4b731e12243ca4d"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Athaulf 2.mp3", "315eec3a4e1b03eb1965dab711be4694"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Athaulf's scout.mp3", "7308d1478d4cdc5fde82f81f768547d5"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Captain 1.mp3", "0311d52c2e9d639e5367d0c01fbfb38c"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Guard 1.mp3", "e1bcab87280d54372c232b4b7c21166c"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Informant 1.mp3", "986d41f9859316f735f8fb7b33557115"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Pikeman 1.mp3", "1279d95644e01c62250b647f14020e28"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Pikeman 2.mp3", "ab20146735ee9a2b95961bb69e02e577"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Scout 1.mp3", "8bf88f966321171f27f09117e82c2ece"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Scout 2.mp3", "d0f003d8e7cdf9e80e4de84ee988667c"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Scout 3.mp3", "d360700a45d3ea62c4186863650e13df"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Scout 4.mp3", "357d2ed7ea2b2cbb2ef029a88e6a7718"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Timer 1.mp3", "6d374dabf91d5014924ae59b6957899a"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Timer 2.mp3", "7a3d3c8c8cca34b389f42fe21b752779"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 2 - Timer 3.mp3", "ca58f1ad3ab0fbc80d73b6333d5b539f"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 1.mp3", "deff5819b46f2aa2f86c5d459cc51407"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 2.mp3", "e5761891845dfed3d4408b4e1f5b4f9e"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 3.mp3", "6ce849293cd6c49afadbbd362f237017"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 4.mp3", "c211f7916bf20842d9adc26cdd041a55"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Alaric 5.mp3", "cbaff528ba57884b08447d1000407a04"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Bodyguard 1.mp3", "1da679e5f7894819381c08002851f5e3"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Condottiero 1.mp3", "543688dbd347d66612463b72d388d08c"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Knight 1.mp3", "0eea8e00c1fec3f07537b82ae8e723d9"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Knight 2.mp3", "5c1581949c06aacbd38b365343374179"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Knight 3.mp3", "8bc09a50f18bf72a4da7220d000f9cbf"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Mercenary 1.mp3", "8e8aa2a3d5d11d35a3fa67be4bedee86"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - sailor 1.mp3", "b21e3d3107a512256ef14cfe163d879e"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Saurus 1.mp3", "5d61ccfdfbd79d98c56051e0e011cd81"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Soldier 1.mp3", "014618fec4272ed8a88604d27ced4945"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 3 - Village Knight 1.mp3", "ad4af1cb62a7d34ed262086ebe13afce"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 1.mp3", "763cacef16a16007a881803b843e55ec"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 2.mp3", "6dad3e4e8af6fe8bbd483f4f75b76117"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 3.mp3", "63db1dee990ca996ffca1fd5d75a4339"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 4.mp3", "8cda951b8af737bbb1517d799e331143"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 5.mp3", "d729c74a888433d321481d0742ed4132"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Alaric 6.mp3", "9b9fc503ae19b8376a85e750341a8392"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 1.mp3", "946a45f3eb114d767c65efebfe0f7cc9"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 2.mp3", "2a9921a4be3c9f60f615796f725ebbf0"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 3.mp3", "f68c7590d1fbf57e56885fa2ce53f59c"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 4.mp3", "6ee7aba89ed5304c734ec4d281945c03"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 5.mp3", "6844c51b08d01c692671388d67026192"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 6.mp3", "0c969ebf54fcb0d760c3374b7cd61cc7"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 7.mp3", "b88302beef489c12164e525518963b3b"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Athaulf 8.mp3", "dcf3b834bbf3f9eb2647593d64533e9a"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Caelir 1.mp3", "4289f381baad1bd207605c2d17484a92"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - centurion 1.mp3", "f24cf930816bac87cd7efdb385a73420"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Civilian 1.mp3", "c173bdbd35789cb77e25101ff8f0d35c"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Knight 1.mp3", "cca77b86cf15cb50c65c35ef44eea183"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Soldier a.mp3", "6434344f7b2396372c5b0e5c44b21720"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric 4 - Soldier b.mp3", "004dc57af384a258f06424db5aa71109"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric Scenario - Guard.mp3", "4ee62d19185aaa7c35204f128fbb28cb"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Alaric 1.mp3", "1f54a75e52c61c6bb28f81beb8727c0e"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Alaric 2.mp3", "e97a45fcb8515713295ee877c4edadf1"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Monk.mp3", "fc2e18eea1f124d6e4fafaab139bca18"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Prisoners.mp3", "939b90ce76966558a31bfac5a9b82c0c"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Refugee.mp3", "542f8c2f2cca3d8f48f0ab3654c1b959"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Scout.mp3", "e6877b12b8a0bab6b0083f70932f27f1"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 1.mp3", "eeaef516c718f236ee91e377e77d4152"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 2.mp3", "422ce6baa4cc060899acc3e1afad62c8"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 3.mp3", "81ac79e6eccc5d47b968d5d39cb2d35d"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 4.mp3", "8346c3ce623e06ae8b24c704ccb87a97"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 5.mp3", "b941435e64b7a0cd8c39fff930b13b46"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 6.mp3", "71c1e7cdc0d6010bfef442d1b6394ea9"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 7.mp3", "ab514908c74bc975d2b895057b67d719"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 8.mp3", "089a78950763cc8c46786c56f2ce25b1"
-			, "Games\Forgotten Empires\Sound\Scenario\Alaric scenario 1 - Soldier 9.mp3", "a1b510a7d9ae49f38c6c0a3769637fb1"
-			, "Games\Forgotten Empires\Sound\stream\INCAS.mp3", "279d859539adcceac4a7242bd2a46fc0"
-			, "Games\Forgotten Empires\Sound\stream\INDIANS.mp3", "9ffd12de2e10d8e095b52dedf41e001e"
-			, "Games\Forgotten Empires\Sound\stream\ITALIANS.mp3", "6dc15854c7bfa6454609909998b8b8f5"
-			, "Games\Forgotten Empires\Sound\stream\LOST.mp3", "6398ddb662250294c23515992d948cce"
-			, "Games\Forgotten Empires\Sound\stream\MAGYARS.mp3", "c0d2f4ea2baef1de285874358c8660a7"
-			, "Games\Forgotten Empires\Sound\stream\SLAVS.mp3", "4d86c0825c7f35ef779b0067f99dd64c"
-			, "Games\Forgotten Empires\Sound\stream\xopen.mp3", "9bee20f48a75b412b13e78e29f786ef1"
-			, "History\Armies.txt", "751550887e87dea04fa03dc6a15ea679"
-			, "History\ArmiesMongols.txt", "7a6d0968bf234f8c1fc2cd29713bb374"
-			, "History\ArmiesOrg.txt", "5fe36625e3ce81b5e5e779715f4ede09"
-			, "History\ArmiesStrat.txt", "861a19178e59dd3a524ce8bef8a958b3"
-			, "History\ArmiesTactics.txt", "f97953f0f48d7c4d28def31c17d9a109"
-			, "History\Aztecs.txt", "20be204f9d3c54056ff649601e4bff6b"
-			, "History\barbarianinvaders.txt", "36a6a1719bbf4999a847650402259cb5"
-			, "History\British original.txt", "846157e97ee78a59d82af64e9b48bc0a"
-			, "History\british regular.txt", "846157e97ee78a59d82af64e9b48bc0a"
-			, "History\british test.txt", "9aee76c1d8311341cd4f66717770cf4e"
-			, "History\british.txt", "671363b98821427075e7fe09c68cf857"
-			, "History\Byzantines.txt", "fcf4fb7b42f46c4c77ff81aa7e835118"
-			, "History\CastleDefenses.txt", "d40db4c196f63abf771c78039de0e1c3"
-			, "History\CastleEvolution.txt", "dc6e9f5d377d21ac07dae16cec802804"
-			, "History\Castles.txt", "ad4febf69e7edc29f0ad9df88ef00c68"
-			, "History\CastleSiege.txt", "ffe628b243a7c672abb6af64d142fcbd"
-			, "History\Celts.txt", "4b90a479c646442d039f7d23261c56c9"
-			, "History\charlemagne.txt", "37d715de6ebf1bc1acff3e3167b61f7c"
-			, "History\Chinese.txt", "5252490fcb03aa5327e2e85ed5b9adf0"
-			, "History\darkagereligion.txt", "e952e34cb4261a42f2a6b06d5aedc04a"
-			, "History\darkages.txt", "cfd70c545aa6decb8acc99627b185498"
-			, "History\DarkArmies.txt", "b0458c3410362474e79d2c7370bf068e"
-			, "History\economy.txt", "86af296589a8a3392ae49c0bf97bfac2"
-			, "History\feudalcontract.txt", "8956dc0cf75a3867ef56ede2beb3a0c1"
-			, "History\feudalism.txt", "f3826c95040d2303060edc313a93aeae"
-			, "History\feudalismdecline.txt", "f503266b42870eff0900f64e74dc211e"
-			, "History\Franks.txt", "100fdb677222905d791acf4ab9fe7b2b"
-			, "History\Goths.txt", "3a3562d2944e6c36ddab7611ce8250ee"
-			, "History\Gunpowder.txt", "a2383bcc4275e879b4256bd49165c2ae"
-			, "History\history.txt", "0e09513fa385be57708d85bf140083aa"
-			, "History\Huns.txt", "37b62ab7b2fa82b207f6ec6323114826"
-			, "History\Japanese.txt", "5cd563f20cf66c4209b69f5897135151"
-			, "History\Knights.txt", "80485cd2019c712127e22fc468c7a49e"
-			, "History\Koreans.txt", "ddc8a24942417ffdfa2bd3bcf2d8e7d5"
-			, "History\latemiddleages.txt", "2cf931bfcc7b617e3373bc68d1af8aa7"
-			, "History\Mayans.txt", "8778b78cb44288c582ba388d84209ec5"
-			, "History\middleages.txt", "5a611fe6d36767ec57d1f3e2eb2ec689"
-			, "History\Mongols.txt", "e706dc842112e75cfe841a7e4971e377"
-			, "History\Naval.txt", "6181f6c8ba28e8a333760a8887a03805"
-			, "History\Persians.txt", "4232e2690bb9d079211eea0590bd1273"
-			, "History\politics.txt", "13d53a621fcb4586169fb711eb97e07d"
-			, "History\religion.txt", "d12b5927a6b783510ae3bd5a49afe75d"
-			, "History\renaissance.txt", "6bc437b28650d4e3a0df8e271c8a3a75"
-			, "History\Saracens.txt", "ed17a795797cb8528df6a41786645afe"
-			, "History\Spanish.txt", "c8451b1a2bc9ff4372e2407a26916069"
-			, "History\technology.txt", "f57431b8aa59b93c56f36960fffeba29"
-			, "History\Teutons.txt", "3e385367b9c853481facfb26cf66b531"
-			, "History\thecrusades.txt", "61450016113f23078039cbe72ede2821"
-			, "History\thefallofrome.txt", "ced789df816e9d09239705a873c6439c"
-			, "History\themanor.txt", "64faa28ec6b3261a1872cc2f283e4432"
-			, "History\thevikings.txt", "f23d8b44719cfb2f5ae3fe0bd8bb6aa3"
-			, "History\Turks.txt", "37467ddc7ec5d081b030a77d89c0cd4b"
-			, "History\Vikings.txt", "323f8c670f28350916de8591883cf726"
-			, "History\Warfare.txt", "ab12778b60839f1beb58367338899c00"
-			, "History\Weapons.txt", "f075ec4a5fce56a1a59db55df61722f2"
-			, "History\WeaponsCav.txt", "566a8ae91f47dec91cc832c35112d546"
-			, "History\WeaponsHand.txt", "2ff2cf8a60515732c9be9da30405d580"
-			, "History\WeaponsMissile.txt", "3eb66cb6ce28de8a8daa5e7874b62867"
-			, "Learn\Learn.txt", "abb00678f536fe02491f9fd8e6ceff19"
-			, "Random\Random.txt", "e46cd19ac20e557f2eed12e2196e21a1"
-			, "SaveGame\SaveGame.txt", "135153fb08bb980dda5205791e4fb159"
-			, "SaveGame\Multi\Multi.txt", "a0662ce83479b4946ed95f3962ab301e"
-			, "Scenario\scenario.inf", "f1d3ff8443297732862df21dc4e57262"
-			, "Sound\campaign\c1s1.mp3", "1826e60b7566e3da967e70fe12980463"
-			, "Sound\campaign\c1s1end.mp3", "4c15b46729991ce42cd70adfd26c2f76"
-			, "Sound\campaign\c1s2.mp3", "dd8405f55e4cc50b494586cfbfe51326"
-			, "Sound\campaign\c1s2end.mp3", "3aa13695bcd0fac134c7fe31c84412be"
-			, "Sound\campaign\c1s3.mp3", "1c096f2342cecfe032632c36766e6975"
-			, "Sound\campaign\c1s3end.mp3", "a14798b7b43b81a50f0e7481f3a49ae1"
-			, "Sound\campaign\c1s4.mp3", "20879acdc0746b0b48e670fa1780ca0a"
-			, "Sound\campaign\c1s4end.mp3", "3cf0cc3497058a61e7e2ef2764d9102f"
-			, "Sound\campaign\c1s5.mp3", "463d682adbaa757ebc5b5ae0e106a8dc"
-			, "Sound\campaign\c1s5end.mp3", "fc70dfd007808598e9d12669fc30d3dc"
-			, "Sound\campaign\c1s6.mp3", "09b3f30df6bd0c93b795da5b04e55b3d"
-			, "Sound\campaign\c1s6end.mp3", "de2db86e86d1569dcf8015cecd5e6a2c"
-			, "Sound\campaign\c2s1.mp3", "fe5e370b88918417c54604e6d77e70fd"
-			, "Sound\campaign\c2s1end.mp3", "a2dd2b4d6bb73427619ba6ca895dea3d"
-			, "Sound\campaign\c2s2.mp3", "3f610e29023a7142d4be4465c0bac7c5"
-			, "Sound\campaign\c2s2end.mp3", "e202c6d83e3aea3e95b9c32523d29aae"
-			, "Sound\campaign\c2s3.mp3", "3f4ffcff65960180769ddafc66b492c1"
-			, "Sound\campaign\c2s3end.mp3", "14f760812a74fa2e7093dec92ec66434"
-			, "Sound\campaign\c2s4.mp3", "8b4d073c47041ec4ce3d8d7386a9a339"
-			, "Sound\campaign\c2s4end.mp3", "062780829cac4937a8a89e5620192ec7"
-			, "Sound\campaign\c2s5.mp3", "1a008a2facfd74ef5cb294ee98f58985"
-			, "Sound\campaign\c2s5end.mp3", "51fde23bf2ae0c595165206ed05bfd80"
-			, "Sound\campaign\c2s6.mp3", "01da84904c47ec434c0e782b29e2f81e"
-			, "Sound\campaign\c2s6end.mp3", "a34e227243066fb3a1eb1094b849a3c2"
-			, "Sound\campaign\c3s1.mp3", "6c8b34d7b1c85dcc0840aa96d61c35a2"
-			, "Sound\campaign\c3s1end.mp3", "bd9f0b70f190e7f94545f89f4db97526"
-			, "Sound\campaign\c3s2.mp3", "06a535903a544c97f9b4c3fe92bda718"
-			, "Sound\campaign\c3s2end.mp3", "96ffcbcba3464ec4111688fa128daf2a"
-			, "Sound\campaign\c3s3.mp3", "71cd8dee4c0ada3d3f89fab0f88df31d"
-			, "Sound\campaign\c3s3end.mp3", "94eceb9b5a4709a7a3fbd728cb7ae930"
-			, "Sound\campaign\c3s4.mp3", "4e8849b4e1620bf3302aad81458ec6ca"
-			, "Sound\campaign\c3s4end.mp3", "e9f49fd9a966be568bfc05ed88b7a195"
-			, "Sound\campaign\c3s5.mp3", "bd872c1b38df4b94d6c96b53611f5aa6"
-			, "Sound\campaign\c3s5end.mp3", "c629cb3ab0753fd153e0dc2d52662dee"
-			, "Sound\campaign\c3s6.mp3", "b66af961ca63411da43b48391cabed04"
-			, "Sound\campaign\c3s6end.mp3", "1722fd824e32da0b46960151c9a2ba99"
-			, "Sound\campaign\c4s1.mp3", "1ee0a71cbe34ecddf9de186eb006eb53"
-			, "Sound\campaign\c4s1end.mp3", "a40e856cab16c68467ce38b1bdff3949"
-			, "Sound\campaign\c4s2.mp3", "3e5a7aee3c51191fa0e0d362fe260002"
-			, "Sound\campaign\c4s2end.mp3", "8c54391a6e54afb5429cbdd46eb12cfe"
-			, "Sound\campaign\c4s3.mp3", "8858759d389b5d6e9cd45e86dd153e11"
-			, "Sound\campaign\c4s3end.mp3", "3ff89b867640406de0c5601f864d404c"
-			, "Sound\campaign\c4s4.mp3", "80fd054c6fef757b92e767950a131e3d"
-			, "Sound\campaign\c4s4end.mp3", "16d1d7539433c31eb7fe1c398a2d8911"
-			, "Sound\campaign\c4s5.mp3", "9407742207e097c1f01c1a6625971134"
-			, "Sound\campaign\c4s5end.mp3", "a0b614419870a21bfe00152799163f58"
-			, "Sound\campaign\c4s6.mp3", "68955661e880b47836da025f9df25bb8"
-			, "Sound\campaign\c4s6end.mp3", "9937656626d9ac8327a07cf9b052c492"
-			, "Sound\campaign\c8s1.mp3", "10bddd0c9a1aad1262a864d1e9a2e5a1"
-			, "Sound\campaign\c8s1end.mp3", "9f927156f8b3afd64856413dfb0a1bb1"
-			, "Sound\campaign\c8s2.mp3", "5ef377305737ec2a5b02c79a9e464e3c"
-			, "Sound\campaign\c8s2end.mp3", "80f866356c6c672f9b00e9eca613217d"
-			, "Sound\campaign\c8s3.mp3", "f569a63158538fdcbe16ebc4e239e680"
-			, "Sound\campaign\c8s3end.mp3", "73fed53738905526dbc2053701c82862"
-			, "Sound\campaign\c8s4.mp3", "c3a83b8f41842458a12142123609120c"
-			, "Sound\campaign\c8s4end.mp3", "ab082a534c6ba325e4165603541632a9"
-			, "Sound\campaign\c8s5.mp3", "38b022dbac8be94a199efb899bcdf05c"
-			, "Sound\campaign\c8s5end.mp3", "49855b573689114e93898418fb6c921b"
-			, "Sound\campaign\c8s6.mp3", "c0aa515bf0367103521c13b6f40a2225"
-			, "Sound\campaign\c8s6end.mp3", "3efff426174beeeae04f699848225a86"
-			, "Sound\campaign\c8s7.mp3", "ccbacde112250000fe3bcf41f3c8f7fb"
-			, "Sound\campaign\c8s7end.mp3", "8e4cf734723868ea1fc565f128acc1ec"
-			, "Sound\campaign\intro.mp3", "6e7f8abf6507eeaab4e266e98434899e"
-			, "Sound\scenario\a1a.mp3", "3ba9e10bc0ba8b7d23d3488ed3eb0e12"
-			, "Sound\scenario\A1AA.mp3", "34983c9ad2f3fd6cc6820c9ba0105b8d"
-			, "Sound\scenario\a1ab.mp3", "5795bbbb092573930eedfd9179c33242"
-			, "Sound\scenario\a1ac.mp3", "4fe87d3b2d96d00f441037b54b79280b"
-			, "Sound\scenario\a1ad.mp3", "0e05be5538970f05114a2de7ded45142"
-			, "Sound\scenario\a1ae.mp3", "f64f2aff76a42b0812e03da12f4b2e2d"
-			, "Sound\scenario\a1af.mp3", "bd52e33a36f0ce42a0302e2bd1a10abc"
-			, "Sound\scenario\a1ag.mp3", "95d509da1a2cc51467ecd3e036d7d341"
-			, "Sound\scenario\a1ah.mp3", "2fe9963e0cad302b3b1a53e8687e87e7"
-			, "Sound\scenario\a1b.mp3", "49bf9b25a5bfdee99c844f773b3dbc3b"
-			, "Sound\scenario\a1c.mp3", "8762c14be5224ae61c5b8ae66889947b"
-			, "Sound\scenario\a1d.mp3", "2e3342a3f9ec8b89f914edb8a1b0886f"
-			, "Sound\scenario\a1e.mp3", "e83888c904180385fb532a08e6863dc0"
-			, "Sound\scenario\a1f.mp3", "fafba451c1a67dbea81f183ae274c818"
-			, "Sound\scenario\a1g.mp3", "70f0651a582e62faccfe6fc899e4cc8c"
-			, "Sound\scenario\a1h.mp3", "148b1156289d1c6ac85ff8536ab744f4"
-			, "Sound\scenario\a1i.mp3", "8c682b1571dab49ba714983f47386a2b"
-			, "Sound\scenario\a1j.mp3", "412ffd279ba8c85433e5fafabafe035f"
-			, "Sound\scenario\a1k.mp3", "68258f07b8922adcd6b6217944980a8f"
-			, "Sound\scenario\a1l.mp3", "30d854ff258928a1880d453978b2c9de"
-			, "Sound\scenario\a1m.mp3", "2b79b737e966f4c526b8235f54cf9040"
-			, "Sound\scenario\a1n.mp3", "cca6eed63a47bd8c47a5674219b7f23c"
-			, "Sound\scenario\a1o.mp3", "99e9d80947123f33ee1c43060277cd44"
-			, "Sound\scenario\a1p.mp3", "c3d8273ca6b9fad2d786af503e70a128"
-			, "Sound\scenario\a1q.mp3", "898a685422d608eebefedd11eeda5459"
-			, "Sound\scenario\a1r.mp3", "822a55cff988ccf93aed85c021e510cd"
-			, "Sound\scenario\a1s.mp3", "dc0941bf7f3028cfe8a67b6d46df81bd"
-			, "Sound\scenario\a1t.mp3", "c0159a445a69c86fef6c5a9ab8dd3a6a"
-			, "Sound\scenario\a1u.mp3", "0a5e9fa0f25ee453630aa6a0e3c04e58"
-			, "Sound\scenario\a1v.mp3", "763545831f9358f018dd2c742bc5f096"
-			, "Sound\scenario\a1w.mp3", "8076650b90f3cccfecea04adcc0f23d4"
-			, "Sound\scenario\a1x.mp3", "62621bc2e841f0d52d940ee498a9e057"
-			, "Sound\scenario\a1xa.mp3", "6374a190607d6d8e0a20294bc222651c"
-			, "Sound\scenario\a1y.mp3", "17393b9fcafaf4e17cd72f04633eed55"
-			, "Sound\scenario\a1z.mp3", "f714171fd2bd2909ba76f3dab8c63e61"
-			, "Sound\scenario\a2a.mp3", "f89eb891d30ed6de5c1eebdba2ab2071"
-			, "Sound\scenario\a2b.mp3", "a3ebcc1231369240d939f39196f7edbe"
-			, "Sound\scenario\a2c.mp3", "2e2b2849a5f4c115f4dd3219fa2651ec"
-			, "Sound\scenario\a2d.mp3", "6a171a207bf5ed6abc100a53ea1ea48e"
-			, "Sound\scenario\a2e.mp3", "a39da82ea90022c933f6f2b8a05c2881"
-			, "Sound\scenario\a2f.mp3", "0623e0c108c77d0e2e65a2a67f8baf15"
-			, "Sound\scenario\a2g.mp3", "561ac01b6199b1f9fd066e2c36675902"
-			, "Sound\scenario\a2h.mp3", "31cd382c893207640cf1cc6dfe8dc5cd"
-			, "Sound\scenario\a2i.mp3", "625594bbc4bddb1e70065f06addaf0a6"
-			, "Sound\scenario\a2j.mp3", "3602436038f76780290d7dbf5b9ca343"
-			, "Sound\scenario\a2k.mp3", "b5e9be8648d546fdd25434d5e3cb0881"
-			, "Sound\scenario\a2l.mp3", "939a2f128e8b7f8f8e9caaa43d00c4e3"
-			, "Sound\scenario\a2m.mp3", "aa2d60bad1d5d31e3552157275743449"
-			, "Sound\scenario\a2n.mp3", "82cb7f077dff3e380814c3d7118b6e8d"
-			, "Sound\scenario\a2o.mp3", "27a13892ed94c9112bd781c80dcfef14"
-			, "Sound\scenario\a2p.mp3", "1636a86374735a5ded98c1124e2ea1c3"
-			, "Sound\scenario\a2q.mp3", "ad3551dd05469c4a6fb21a1f2e931e22"
-			, "Sound\scenario\a2r.mp3", "4aef1b4e66abbbb4edbf080a71b88471"
-			, "Sound\scenario\a2s.mp3", "28c6a3e94c9e4d416abc8568db3099c0"
-			, "Sound\scenario\a3a.mp3", "d11b027b7b1720531e6345093ca02042"
-			, "Sound\scenario\a3b.mp3", "7b2a33352d6f1fffb8e8addd88c4ea48"
-			, "Sound\scenario\a3c.mp3", "36379fb08fac4b554788eed1f2612318"
-			, "Sound\scenario\a3d.mp3", "0c5dc87a340134c8f15bd2ac6272ca0e"
-			, "Sound\scenario\a3e.mp3", "e838c4120ce519b7880d4cb5a7dce76c"
-			, "Sound\scenario\a3f.mp3", "bfb8f94cd4556e9c621bee8e159b9c77"
-			, "Sound\scenario\a3g.mp3", "0488baaa39b55b94ec7b66092963bf4f"
-			, "Sound\scenario\a3h.mp3", "1ae1f9e5fca633afeec2a5c58dff7f9f"
-			, "Sound\scenario\a3i.mp3", "ddee36ffddab91340d6af4fb6bcf38aa"
-			, "Sound\scenario\a3j.mp3", "6d973ac624cefc67148e3923d204d219"
-			, "Sound\scenario\a3k.mp3", "8de1dde6f009024618a5f351e8d3eb9a"
-			, "Sound\scenario\a3l.mp3", "c4f0ce0c41b1cc2208073bd252dcb486"
-			, "Sound\scenario\a3m.mp3", "7fd6834e04b2557af40727fe63ba3ccb"
-			, "Sound\scenario\a3n.mp3", "3198cb618b5c1e27a80372a28c9ee862"
-			, "Sound\scenario\a3o.mp3", "3e69f7c1a266bb5bcc6f71abbe1faa54"
-			, "Sound\scenario\a3p.mp3", "8a789e6ea238ebcdfb7cc19c156ae2b2"
-			, "Sound\scenario\a4a.mp3", "090370567d8357e98544ca3d4583024c"
-			, "Sound\scenario\a4b.mp3", "e00794542bb27d97600bbc466db42205"
-			, "Sound\scenario\a4c.mp3", "2946d6aa83251edda56845430fcf2021"
-			, "Sound\scenario\a4d.mp3", "4c808420f4697b20e475d6e8bdf700bc"
-			, "Sound\scenario\a4e.mp3", "f80041863556564bbda0f5f7cc4218ec"
-			, "Sound\scenario\a4f.mp3", "16f076604c81e3553675e450f59c7513"
-			, "Sound\scenario\a5a.mp3", "9dff318cc4909a40a42909ba56db7694"
-			, "Sound\scenario\a5b.mp3", "1747dc487d59d0474aedeb00ffc28a83"
-			, "Sound\scenario\a5c.mp3", "6ab2b35fa840b206107c4392ed48da87"
-			, "Sound\scenario\a5d.mp3", "2be8782958765dfa4d7339a41d52e4d2"
-			, "Sound\scenario\a6a.mp3", "5bc58700e1be85024555607b3aa17c91"
-			, "Sound\scenario\a6b.mp3", "74730eb3d60218773bd32e571eba8dc5"
-			, "Sound\scenario\Age Up.mp3", "ec4fafe5a72f49e2290c6ce24c1ce82d"
-			, "Sound\scenario\b1a.mp3", "5f03ae423b454bb577bc5e0d7382fa19"
-			, "Sound\scenario\b1b.mp3", "8573755207a8e10a1de7ae58553999c6"
-			, "Sound\scenario\b1c.mp3", "c4bf58f439f4a5898071239e6944d9df"
-			, "Sound\scenario\b1d.mp3", "0817a5eef0c5da4b971a32208dbdf56b"
-			, "Sound\scenario\b2a.mp3", "18b325f3c4c11d572d8459acb583d26a"
-			, "Sound\scenario\b2b.mp3", "6c7945962ba9b292adc608fe80c0377c"
-			, "Sound\scenario\b2c.mp3", "7aab9d3127954e9990fd9ad1e4daab91"
-			, "Sound\scenario\b3a.mp3", "b095123343e3d894099feb61ce9e2719"
-			, "Sound\scenario\b3aa.mp3", "42fafd4f7cc27d11504cee80137697c5"
-			, "Sound\scenario\b3b.mp3", "0d09a191b35094c18529cd9db8e157df"
-			, "Sound\scenario\b3c.mp3", "a591e7cf4267ea821b814a45ea2b984b"
-			, "Sound\scenario\b3d.mp3", "17e4fe21ae704b9da7e86422e7e7b86f"
-			, "Sound\scenario\b3e.mp3", "6a854cd5ebe67344f230b2850ab2d5c3"
-			, "Sound\scenario\b4b.mp3", "e670a1e75390a004d6358ccd1b51c101"
-			, "Sound\scenario\b4c.mp3", "bf4ebbb7547fb44eea0eae55d77f75b1"
-			, "Sound\scenario\b4d.mp3", "bf150b4c3948dee15c6f5d10d5c48721"
-			, "Sound\scenario\b4e.mp3", "75780d3b037237b30b7221bc663e6100"
-			, "Sound\scenario\b4f.mp3", "81cf87ba8966726f9172e9cf38de2763"
-			, "Sound\scenario\b5a.mp3", "ea40c160b92fbc8731a4d4f0295a3a05"
-			, "Sound\scenario\b5b.mp3", "c31c6b4c58d73f06cf94f4eccb6391d5"
-			, "Sound\scenario\b5c.mp3", "6adc455694da02682c61fb8c3a958e2d"
-			, "Sound\scenario\b5d.mp3", "46ac2a904abf1450889f19ec2b6a2239"
-			, "Sound\scenario\b5e.mp3", "41874830534b6f2fc5dcf1755a23e649"
-			, "Sound\scenario\b5f.mp3", "7ccd0c8236826997d161cdb0c8822948"
-			, "Sound\scenario\b5g.mp3", "420276e405fbff02f3474c64d2ba4909"
-			, "Sound\scenario\b5h.mp3", "a97904bdad788a6d84bf5e8bdfe245db"
-			, "Sound\scenario\b5i.mp3", "b8b01651e0abf530c7fd972cca671993"
-			, "Sound\scenario\b5j.mp3", "c0d113903dfbde920b3825c0cf820db4"
-			, "Sound\scenario\b5k.mp3", "66b814b9428684ee2290ff366bee164b"
-			, "Sound\scenario\b5l.mp3", "48dd307a5e3d0ef006d003d1f8e451ab"
-			, "Sound\scenario\b5m.mp3", "dd1f540d68fc5c82092531d10e473668"
-			, "Sound\scenario\b5n.mp3", "5121e93f6e0e9fb8feb62ab63d328c5a"
-			, "Sound\scenario\b5o.mp3", "131f8901d9fe7191b53b22e438db693e"
-			, "Sound\scenario\b5p.mp3", "364d3fd2f8b19e1bc599d6db234e2370"
-			, "Sound\scenario\b5q.mp3", "3795b656b19b9e0b4405fd0f24af681e"
-			, "Sound\scenario\b6a.mp3", "cdff4744e14e6f36e94ed9e1ca8c12c3"
-			, "Sound\scenario\b6b.mp3", "43347886f965a35826eff7270cc146dd"
-			, "Sound\scenario\b6c.mp3", "aa00febec801361ea7c61f58ed992b9d"
-			, "Sound\scenario\b6d.mp3", "9e214f87cd972f23459c11e4db025e36"
-			, "Sound\scenario\b6e.mp3", "530c174df0f8056e29a7ddc5bb198d4b"
-			, "Sound\scenario\b6f.mp3", "f45752cb06b7f5980ca1712f6e7e42ba"
-			, "Sound\scenario\b6g.mp3", "3ff34bd4a7846090ee150cc7dc973072"
-			, "Sound\scenario\b6h.mp3", "ec95b4e4f7f410f6a8dedbb7f65b90c2"
-			, "Sound\scenario\b6i.mp3", "9e22d7613d5ed5b955bcce1fd5ba2fb7"
-			, "Sound\scenario\b6j.mp3", "c3039b9bd76417eba3049373dda9732b"
-			, "Sound\scenario\b6k.mp3", "18bcee992a04c8fe3c241b476ac98d0c"
-			, "Sound\scenario\b6l.mp3", "814d3b48d6eb3f33a65d3786df19994d"
-			, "Sound\scenario\b6m.mp3", "c98fcbf4c38b25d3c7ac783484971809"
-			, "Sound\scenario\b6n.mp3", "aca39a48aec5e7afde04366770cab0ee"
-			, "Sound\scenario\c1a.mp3", "316829e1f0a2b63fcdb975f001531bef"
-			, "Sound\scenario\c1b.mp3", "e64e9eb12c947cccb4ec18780325baf0"
-			, "Sound\scenario\c1c.mp3", "c5d247846bdfe5eb075e179fa491a4b2"
-			, "Sound\scenario\c1d.mp3", "55efbe140cfc6f76e2cd36dd3ccead75"
-			, "Sound\scenario\c1e.mp3", "5cd2110d8def50f50bd7049f61042173"
-			, "Sound\scenario\c2a.mp3", "59542c25cbc6dc583c71e90104353f13"
-			, "Sound\scenario\c2b.mp3", "83c479dd0bdacc5ce8e1313bdf867106"
-			, "Sound\scenario\c2c.mp3", "c14966247a94340325c38b911bb08ba9"
-			, "Sound\scenario\c2d.mp3", "c5aa26704b8a3d8d53b9787a7e266c03"
-			, "Sound\scenario\c2e.mp3", "20f6054cf2b052f9f30b9aa1a9723b95"
-			, "Sound\scenario\c2f.mp3", "58cd61e4badf7baf0c52dd21837b9024"
-			, "Sound\scenario\c2g.mp3", "c544b69467c121f1abf5c9cc07a75a73"
-			, "Sound\scenario\c2h.mp3", "0d8abbf3445c6ba6cbad1b30c8b67255"
-			, "Sound\scenario\c2i.mp3", "962f951b60c95b24e6a143ac2531db26"
-			, "Sound\scenario\c2j.mp3", "7467683cadcd542b6ef60401a805dfcf"
-			, "Sound\scenario\c2k.mp3", "9c266830176a97b507111f22251c1989"
-			, "Sound\scenario\c2l.mp3", "27a8698c97bf9b216ae0e8326dc6f03d"
-			, "Sound\scenario\c3a.mp3", "31b33516b1576d1ab1ae2c1249deb300"
-			, "Sound\scenario\c3b.mp3", "0c0558693c47bb116f753233ab29e58e"
-			, "Sound\scenario\c3c.mp3", "9966fd6038e35dbcae74325f1e6d7241"
-			, "Sound\scenario\c3d.mp3", "2eb1449e6c9c275c5b73ee747ddbc0ca"
-			, "Sound\scenario\c3e.mp3", "f3ae89e238bb7d3a235a6fa83db907d1"
-			, "Sound\scenario\c3f.mp3", "b5e58ba5ad2ee2cfab00eba15b3196ae"
-			, "Sound\scenario\c3g.mp3", "590e8f5267f1e9c39e5483836feece4d"
-			, "Sound\scenario\c3h.mp3", "57cc59820c732c56326b3b62ce07b484"
-			, "Sound\scenario\c4a.mp3", "b4c194f7de4f462f30be7141bfe665af"
-			, "Sound\scenario\c4b.mp3", "d2032a14c56fd55769102d69a542aa52"
-			, "Sound\scenario\c4c.mp3", "014e41be93d9a659867345b2534549ec"
-			, "Sound\scenario\c4d.mp3", "4cb8aea14a88e307a41fd31b6faff23f"
-			, "Sound\scenario\c4e.mp3", "5fd1ec94ca192298263d8f5121b4e5ff"
-			, "Sound\scenario\c4f.mp3", "cabf8c8d639ff524cb9951ec3f43d8bf"
-			, "Sound\scenario\c4g.mp3", "2f723b98f61c6797970694e88f7aca9b"
-			, "Sound\scenario\c4h.mp3", "15fad0e359fda590048a801de5901ef2"
-			, "Sound\scenario\c4i.mp3", "d50f49b9fb8f7ab4f12aed2b40ce2009"
-			, "Sound\scenario\c4j.mp3", "8fe2132cac4970e83cc3be39da010d99"
-			, "Sound\scenario\c4ja.mp3", "af560a85f824b8a4a6bb27e9d5612b1a"
-			, "Sound\scenario\c4k.mp3", "ccaa601b879e219adaa3e44a2cc7ddcf"
-			, "Sound\scenario\c5a.mp3", "e29bff00b9cfa5de192c59bbc7bb9e09"
-			, "Sound\scenario\c5b.mp3", "eab7517343d7b6447f83f798ca440b9c"
-			, "Sound\scenario\c5c.mp3", "9876763e511baa2045a9ba70180cd5e9"
-			, "Sound\scenario\c5ca.mp3", "02f3410b0d72522dfc24145ac5699da0"
-			, "Sound\scenario\c5d.mp3", "4ccfea24121695829c56edf505121e73"
-			, "Sound\scenario\c5da.mp3", "e2996e8f629c8ab41384b5e73b324f7a"
-			, "Sound\scenario\c5e.mp3", "125051418542dcb2e28a5b1c33790ff2"
-			, "Sound\scenario\c5f.mp3", "502dae548ae3a61c5d0b4ddefd8b648c"
-			, "Sound\scenario\c5g.mp3", "cf54f07245d6df792f7ececcd71d086a"
-			, "Sound\scenario\c5h.mp3", "ad57689b17ac2f7c797735bb3e233c4d"
-			, "Sound\scenario\c5i.mp3", "96332208a0b770d360aec267b34ae793"
-			, "Sound\scenario\c5j.mp3", "090a5052ed03277f238aa4982cb32938"
-			, "Sound\scenario\c5k.mp3", "6fcf390c7618bb260e6813b32e5fe778"
-			, "Sound\scenario\c5l.mp3", "2c9aafff0e9e2e15c7c66df06a08a255"
-			, "Sound\scenario\c5m.mp3", "8cdb0c320b849015fb880dd2e584e9c2"
-			, "Sound\scenario\c5n.mp3", "e17698c00807d75de39da61f81c5ad85"
-			, "Sound\scenario\c5o.mp3", "a9529f0dd7422de43cba4be5f69c76e4"
-			, "Sound\scenario\c5p.mp3", "b3da3b37f136234d39e67e8a30ad6178"
-			, "Sound\scenario\c5q.mp3", "d0ef887e2416ef90e6a8060e3f6cb5b4"
-			, "Sound\scenario\c5r.mp3", "3f88f6d3ded863b107c12e1fdde7fc57"
-			, "Sound\scenario\c6a.mp3", "5040afe37ca3447cdaa3dd8fa7431464"
-			, "Sound\scenario\c6b.mp3", "eed8de2676ade82411c8de93f42ee95d"
-			, "Sound\scenario\c6c.mp3", "db328eba8fe4fc2fc0c55076213780f3"
-			, "Sound\scenario\c6d.mp3", "7a664f071eb9cb2749a88bb14aeada3d"
-			, "Sound\scenario\c6e.mp3", "929df5028035cffbbdefc21d45c4ef68"
-			, "Sound\scenario\c6f.mp3", "5737cefa6be5d15027a0983a94d5f9a9"
-			, "Sound\scenario\c6g.mp3", "7fc132c724049d672a99f56c347a5c73"
-			, "Sound\scenario\c6h.mp3", "d503cc5ed60c68ddfba2a61e39a0d864"
-			, "Sound\scenario\c6i.mp3", "58960a60e5fad146565a47d0d3932468"
-			, "Sound\scenario\c7a.mp3", "4ce2960198018138d8f0d7f1672bbaf3"
-			, "Sound\scenario\c7b.mp3", "40de33d424cd7e322ceec4c3c9cb8ddd"
-			, "Sound\scenario\c7c.mp3", "050484787a2d81ebcc74074635dd2cbb"
-			, "Sound\scenario\c7d.mp3", "c0030276b4dc653a3eeb4a6eb3c85f34"
-			, "Sound\scenario\c7e.mp3", "3fc507b31c9ad49cf2dd6572077007ec"
-			, "Sound\scenario\c7f.mp3", "b9898ac7bc1a12c9b72773890f378ddb"
-			, "Sound\scenario\c7g.mp3", "011c0c1043f681de51b8a7efdb07dbf4"
-			, "Sound\scenario\c7h.mp3", "99e2df9c1ef26ead8564d1395fcefb87"
-			, "Sound\scenario\c8a.mp3", "561d764b86a8d15802df37df464bc7a1"
-			, "Sound\scenario\c8b.mp3", "6442352ce74f939f3bcad3971ee6c64c"
-			, "Sound\scenario\c8c.mp3", "b412a76e2fad262f85a3718409e8eb73"
-			, "Sound\scenario\c8d.mp3", "096ffeaf82ce6b526950688534b5f217"
-			, "Sound\scenario\c8e.mp3", "a507983fa2952e79b823826a15930bb6"
-			, "Sound\scenario\d1a.mp3", "1e9b5a0170cafa254a98dd7127f7d539"
-			, "Sound\scenario\d1b.mp3", "262e025e50779ce9d956b6ab1f30b903"
-			, "Sound\scenario\d1c.mp3", "5bf9cc6108bfd70c07e99fe9ee6650bf"
-			, "Sound\scenario\e1a.mp3", "1f0ed2bb2711e2d3088e8866e743c063"
-			, "Sound\scenario\e1aa.mp3", "2d8bed027b2b925c8492a16f63b25025"
-			, "Sound\scenario\e1b.mp3", "bdfa8d904366ad76b40b86a091e85202"
-			, "Sound\scenario\e1c.mp3", "7883490db394c3c9b876bd9881f70da3"
-			, "Sound\scenario\e1d.mp3", "e577079452efc2e20c172d080f3b51d5"
-			, "Sound\scenario\e1e.mp3", "74e34f226655a3a049e23722b8180617"
-			, "Sound\scenario\e1f.mp3", "7982da6030190b8b1ac86867c9193c08"
-			, "Sound\scenario\e1g.mp3", "409e3626cf13b411e37edc2bb9d94024"
-			, "Sound\scenario\e1h.mp3", "50188d8f104be2b73a43401eacd9d84a"
-			, "Sound\scenario\e1j.mp3", "5bf0d2e94419a392c5008a5fb48dccba"
-			, "Sound\scenario\e1k.mp3", "3157aca64289d6772cae708656f9303c"
-			, "Sound\scenario\e1l.mp3", "bf73dcbbb139eba26aa1a9b1e9763934"
-			, "Sound\scenario\e1n.mp3", "69c4065c5dbef4d1a821c736b4701986"
-			, "Sound\scenario\E1o.mp3", "65239a567a22a3dec00097779756632f"
-			, "Sound\scenario\e1p.mp3", "8161be75119dc9565a13d22290a90741"
-			, "Sound\scenario\e1q.mp3", "1525979d18d2ba0897534ad8a4ebc84b"
-			, "Sound\scenario\e1r.mp3", "382f3c4d67b32889999ddd84c8f1a400"
-			, "Sound\scenario\e1s.mp3", "a6a3bfe2315745091f30fe1a11b3be2b"
-			, "Sound\scenario\e1t.mp3", "8f966dee59008d24c4855a32ba5cc340"
-			, "Sound\scenario\e1u.mp3", "485f0418f3b5666fd1d49146bca96f8d"
-			, "Sound\scenario\e1ua.mp3", "ed7ac89aaec970577a089aaac5b1fb34"
-			, "Sound\scenario\e1v.mp3", "d28daeaaef7064d948c4ac00ff38aaca"
-			, "Sound\scenario\e1w.mp3", "0dae97e6ddd04a8eee4aadff840d07a9"
-			, "Sound\scenario\e1x.mp3", "8f886098b645844f756901938610f1df"
-			, "Sound\scenario\E1Y.mp3", "6dbe112f50ffdfe5ca6ffa4afb4d1660"
-			, "Sound\scenario\e1z.mp3", "f037573028c9d5816c623d90e2f70b48"
-			, "Sound\scenario\e2a.mp3", "11aecd326bc480e2461ac05031b78ba6"
-			, "Sound\scenario\e2b.mp3", "3f6b18a50d29a6284fd5c885997672ce"
-			, "Sound\scenario\e2c.mp3", "08914ec9c2313b0e6480c99d3930b507"
-			, "Sound\scenario\e2d.mp3", "1cea614d5863d2acf8c06a18c32e34ec"
-			, "Sound\scenario\e2e.mp3", "9e69cb7852f476ef4edb2b213c853709"
-			, "Sound\scenario\e2f.mp3", "d6d09e6497a0971478146b428b9f07fa"
-			, "Sound\scenario\e2g.mp3", "6bd05125cf39575dd2ccde772abac323"
-			, "Sound\scenario\e2h.mp3", "a12bb24f916229cd79af71e5ee7257ed"
-			, "Sound\scenario\e3a.mp3", "a764d0082f15966b54bec14ed1fe459c"
-			, "Sound\scenario\e3b.mp3", "2cc150f332e73cd513b068122128ce5a"
-			, "Sound\scenario\e3c.mp3", "21335defe9e1b103edb3a239fece71ae"
-			, "Sound\scenario\e3d.mp3", "7e82e8a425493ad9f7b40fb952e2f2d5"
-			, "Sound\scenario\e3e.mp3", "8c055c6fe5543891ea5c9ff8ff7508c8"
-			, "Sound\scenario\e3f.mp3", "3d6a3aa537ed54fc0e4be3b1bfcada5f"
-			, "Sound\scenario\e3g.mp3", "daca0655237a8329cd31a17bf49ac08b"
-			, "Sound\scenario\e3h.mp3", "1a8073fdd03c7de7f25a65da1c18241c"
-			, "Sound\scenario\e3i.mp3", "349e9267f35b10f02ca735bf07d857a6"
-			, "Sound\scenario\e3j.mp3", "4a60568f6239485fdb37e9bff94bcaa0"
-			, "Sound\scenario\e3k.mp3", "ceed35c2c25dc35a9a88f85fdfd1f4f7"
-			, "Sound\scenario\e3l.mp3", "6ea88ed03ed0cd3e34bcf5390059526a"
-			, "Sound\scenario\e3m.mp3", "016b3aded6671bcc7699218dfe588a7c"
-			, "Sound\scenario\e4a.mp3", "b8bef8f1ebc84d1cc0cf0753ac29f0ce"
-			, "Sound\scenario\e4b.mp3", "62f91305038a43c7ce0c36460f3b6044"
-			, "Sound\scenario\e4c.mp3", "21b61b49f348552899e4b1faf9e6222f"
-			, "Sound\scenario\e4d.mp3", "b13475e82b7885b08e60be494132f11c"
-			, "Sound\scenario\e4e.mp3", "a1359c38496e2ba030827c886fbaf8f0"
-			, "Sound\scenario\e4f.mp3", "66ef2ad4884c7827b7b841e184e0cb27"
-			, "Sound\scenario\e4g.mp3", "63482059226e2155cc6cd73950fb93c3"
-			, "Sound\scenario\e4h.mp3", "8ada64521bf49b402c0b6290ebecac8f"
-			, "Sound\scenario\e4i.mp3", "e03811c6ba087829918ddc8ee0a66990"
-			, "Sound\scenario\e4j.mp3", "5d50c227df3879f62d7ea3393d06185e"
-			, "Sound\scenario\e4k.mp3", "08db36a1c6a1e837a2ad82d46d711fa9"
-			, "Sound\scenario\e4l.mp3", "0bd97588235f5ac884f3a8fab4c36a4b"
-			, "Sound\scenario\e4m.mp3", "37f1d9ee06bec483a143569a52b42bda"
-			, "Sound\scenario\e4n.mp3", "5f2a35a0289db90757676c296cd2be3b"
-			, "Sound\scenario\e4o.mp3", "1b9188d7b7ccfb6b8733a2c9d21f1607"
-			, "Sound\scenario\e4p.mp3", "b6c184d97383645974593904e1f717c7"
-			, "Sound\scenario\e4q.mp3", "cd01b612a00c36ac1011b13d53b98e84"
-			, "Sound\scenario\e4r.mp3", "dacc3a1cb38f390ee3915f2b749578df"
-			, "Sound\scenario\e4s.mp3", "2d357758246a2554e0942c5ac9da29ef"
-			, "Sound\scenario\e4t.mp3", "4a71ee5a97ef8493397775d085a354bc"
-			, "Sound\scenario\e4u.mp3", "805ed69b096cb53f5ac41d1f5737bdb1"
-			, "Sound\scenario\e4v.mp3", "c6f02910de1838b434c761fcac15a91d"
-			, "Sound\scenario\e4w.mp3", "0f554cf425e62939b27372ff6b2576e2"
-			, "Sound\scenario\e4x.mp3", "5324aa15fb267bba17814d49a43a35c8"
-			, "Sound\scenario\e4y.mp3", "48666996c0e02f58952e47d94b75a1e3"
-			, "Sound\scenario\e5a.mp3", "92efe7b8a35186b54d165a4d19d80183"
-			, "Sound\scenario\e5b.mp3", "444d7fdb43360b4fed030b4009b7914d"
-			, "Sound\scenario\e5c.mp3", "9180bb61f51ebb5ef99d0e92dec447d5"
-			, "Sound\scenario\e5d.mp3", "f491cbec9d7455890f01f95b40a8f681"
-			, "Sound\scenario\e5e.mp3", "36fb2112b2d56f5af7a82a639f18cf24"
-			, "Sound\scenario\e5f.mp3", "b62152f45ce27d831c41f7f0f3ddcd8d"
-			, "Sound\scenario\e5g.mp3", "dcb9f054f779c1e101ac3ec3a73e9831"
-			, "Sound\scenario\e5h.mp3", "c10af6b5b91e03c52862216e4c89f420"
-			, "Sound\scenario\e5i.mp3", "2ef02d7fd2006edb61faed43aaaef71b"
-			, "Sound\scenario\e5j.mp3", "ca28000ef22c0af2e7dd9d5d0c305ff6"
-			, "Sound\scenario\e5k.mp3", "cf5c30b654d7abdfcd0291973831228c"
-			, "Sound\scenario\e5l.mp3", "c7381d27c51e4240b97931353ed1282e"
-			, "Sound\scenario\e6a.mp3", "c35a00ad8ae0e6bea5c760a50761328a"
-			, "Sound\scenario\e6b.mp3", "47e2497c5c5774c91725277f81a2400a"
-			, "Sound\scenario\g1a.mp3", "446b91fd5018cab6be0da1816ee03e8c"
-			, "Sound\scenario\g1b.mp3", "87b4cef197c3b21e84acd8f665d5b390"
-			, "Sound\scenario\g1c.mp3", "dc533b8d7fe06e474a6d9117c6f0a830"
-			, "Sound\scenario\g1d.mp3", "476daf52ed297efa050b33732c59956c"
-			, "Sound\scenario\g1e.mp3", "ba7eaed5574f296a6fbdb081adc5accd"
-			, "Sound\scenario\g1f.mp3", "f08e9bc9a654a110b4920cb03dc599ff"
-			, "Sound\scenario\g1g.mp3", "93e1b49bf37e914f69e963e5d5aad4e0"
-			, "Sound\scenario\g1h.mp3", "3a62a634f0c271579f2186ea08842fbb"
-			, "Sound\scenario\g1i.mp3", "aff53c8a83da2e4533070fd725081a3a"
-			, "Sound\scenario\g1j.mp3", "93343362711d5a7e6d87b6ce5dd6a41c"
-			, "Sound\scenario\g1k.mp3", "69e18473a6bdb75135e63ac2c135d13b"
-			, "Sound\scenario\g1l.mp3", "bfa507e519b74a5a1dfb6c03e70bb409"
-			, "Sound\scenario\g1lold.mp3", "8192099ac0ca4d6374fb5193e1190583"
-			, "Sound\scenario\g1m.mp3", "fccd3dfb0afb01ca056157ab41f77b62"
-			, "Sound\scenario\g2a.mp3", "42941d645a62bde56f4b0fcb24bc80f1"
-			, "Sound\scenario\g2b.mp3", "fe2498508deb051cfd01c78b43071d99"
-			, "Sound\scenario\g2c.mp3", "3f026b4974a4d556a40e34e45bb0968e"
-			, "Sound\scenario\g2d.mp3", "7e9a33398b2440c363fcc65050c1f6ec"
-			, "Sound\scenario\g2e.mp3", "f32dd6307c5fe52e7d0b04a7a2992893"
-			, "Sound\scenario\g2f.mp3", "f952b24a5888b205d770322c2759ec3a"
-			, "Sound\scenario\g2g.mp3", "b837762ae72224b363d93479e6e6a628"
-			, "Sound\scenario\g2h.mp3", "08417fbf6e37ab2b44f0d068010a21da"
-			, "Sound\scenario\g3a.mp3", "97f49f52653ecf99f3828e4170bc37bc"
-			, "Sound\scenario\g3b.mp3", "9386d7884cb3e56b331a56ec9161568d"
-			, "Sound\scenario\g3c.mp3", "c4b39e53d5d66918c71776609a51e149"
-			, "Sound\scenario\g3d.mp3", "22fda71d8c39325b05be7495b459f347"
-			, "Sound\scenario\g3e.mp3", "a9ee1624fcf18bb1bb1d484ed0c95ab8"
-			, "Sound\scenario\g4a.mp3", "b78577d6b761ddc87f23171b60a5bef6"
-			, "Sound\scenario\g4b.mp3", "3b003ba4d252ab9585699baa14b1577c"
-			, "Sound\scenario\g4c.mp3", "cb945db80f2e713461c801c61383cc4c"
-			, "Sound\scenario\g4d.mp3", "b4fbb656a06bc21b0274487f95933dc5"
-			, "Sound\scenario\g4e.mp3", "3e95e0291b344689081fc8bbffdc4fb4"
-			, "Sound\scenario\g4f.mp3", "bb7afae25b220b3b86d0e75315cb30c9"
-			, "Sound\scenario\g4g.mp3", "868227fd59c0e74fedef211ed62dbfd8"
-			, "Sound\scenario\g4h.mp3", "368f80409f17eee6ef851d4f8c7eb999"
-			, "Sound\scenario\g4i.mp3", "8d7155659d1e5eaf4d6144d4fda69438"
-			, "Sound\scenario\g4j.mp3", "722f506b16c160446f19c7f261b8197d"
-			, "Sound\scenario\g5a.mp3", "32311c87651fb3c8a66ea1cdcafc92dd"
-			, "Sound\scenario\g5b.mp3", "64f5a4ac89fd393917890b924b561b6d"
-			, "Sound\scenario\g5c.mp3", "9f17d8a436a863f1b5f9f29a237e0c5f"
-			, "Sound\scenario\g5d.mp3", "995669ef9003ab0b8815efa6bd1bfe5f"
-			, "Sound\scenario\g5e.mp3", "b1bd08b24e766dd217c7b2ad780a054a"
-			, "Sound\scenario\g5f.mp3", "208d6cbceb97f4f1899ae776a2d22058"
-			, "Sound\scenario\g5g.mp3", "5df0fccf081f60ab2075e933c18118ef"
-			, "Sound\scenario\g5h.mp3", "e6bfd7492204ad01c2b841f9f49fa38f"
-			, "Sound\scenario\g5i.mp3", "adf7a0dbae62a2d86ec26bded74ef982"
-			, "Sound\scenario\g5j.mp3", "5514eb92edd556b5d6170d77d83bd1ae"
-			, "Sound\scenario\g6a.mp3", "c9caafdeabd467c05538676201f92a59"
-			, "Sound\scenario\g6b.mp3", "153e63066883f1bc8cb7c22e41afc96a"
-			, "Sound\scenario\g6c.mp3", "2585761b5b42a286eaea5c1037adef73"
-			, "Sound\scenario\g6d.mp3", "f1e0612ab4350b9e003dbdc6b5aa4de8"
-			, "Sound\scenario\g6e.mp3", "3e1faca4deb2266c952fe3e7ee35d319"
-			, "Sound\scenario\g6f.mp3", "ac8a97265a79ef670928ca3999cf285f"
-			, "Sound\scenario\g6g.mp3", "29beba3213f31a69cbe3d4ef7e171eb6"
-			, "Sound\scenario\g6h.mp3", "3f795dbf05f7da3817597fd22689fe06"
-			, "Sound\scenario\g6i.mp3", "93d28d7181798900c22a140297c478b1"
-			, "Sound\scenario\j1a.mp3", "e5f7d5ffdfef20f290ffe96d0c69276e"
-			, "Sound\scenario\j1b.mp3", "40cdcdf8d847d298b3c2507008300d56"
-			, "Sound\scenario\j1c.mp3", "4e4181b77227cea26049ac582a473243"
-			, "Sound\scenario\j1d.mp3", "a4b7e53e4c76d7ec9dfd4341747fe131"
-			, "Sound\scenario\j1e.mp3", "f6bae6aa87fba1fe3d10add631209360"
-			, "Sound\scenario\j1f.mp3", "b3e9029a9d949a863988edd95d7c71f4"
-			, "Sound\scenario\j1g.mp3", "c11a3d719c1184e22c0b63710d0cb47b"
-			, "Sound\scenario\j1h.mp3", "c3910021d5af52db85af4295c76bb59a"
-			, "Sound\scenario\j1i.mp3", "b76f8a73ed61f217ae4f3af45fa79250"
-			, "Sound\scenario\j1j.mp3", "929b0e66ddcb93e8f15f39f88f75b7a8"
-			, "Sound\scenario\j1k.mp3", "da4d2602e3e8de7e89794810d0fd50e4"
-			, "Sound\scenario\j1l.mp3", "60478a7d816dc106c0406086a7357b70"
-			, "Sound\scenario\j1m.mp3", "5861ada56df294d7b09a8850854ba7f9"
-			, "Sound\scenario\j1n.mp3", "7a22845033e42e45743d164d3f332238"
-			, "Sound\scenario\j1o.mp3", "874b86582eaa939ebbb0f775bb535283"
-			, "Sound\scenario\j1p.mp3", "652a8341ed4c857fbd5e1326de9cf0c5"
-			, "Sound\scenario\j1q.mp3", "41c5290f13c911df72f283528f6d5f4f"
-			, "Sound\scenario\j1r.mp3", "c18f33cd359d08c1a203d6dc0422d8ae"
-			, "Sound\scenario\j1t.mp3", "c85a5acd2d3b2143355318b35913507b"
-			, "Sound\scenario\j1u.mp3", "6c095348473b05737289d736eb319640"
-			, "Sound\scenario\j1v.mp3", "fcba062d34e4812a5e8c5e938324d02a"
-			, "Sound\scenario\j1w.mp3", "35a8ff45617416da5876ec6a1bb0a268"
-			, "Sound\scenario\j1x.mp3", "919625cbe557b8030e441a80f4d015ec"
-			, "Sound\scenario\j1y.mp3", "18aa6245b2a45d97da9d0e4e7a248e88"
-			, "Sound\scenario\j1z.mp3", "76c1116f3212676cef1012935909c1f5"
-			, "Sound\scenario\j2a.mp3", "ba6136b727b01b22980f62f467a8cb59"
-			, "Sound\scenario\j2b.mp3", "e676f6f4c06d8556a7dfb17eb6b2bc11"
-			, "Sound\scenario\j2c.mp3", "9c423d6f9c8a7e309bbe6e3cc53c8165"
-			, "Sound\scenario\j2d.mp3", "cbc7e7366bea459e1b7fae31577365f0"
-			, "Sound\scenario\j2e.mp3", "71a029e11bd07e332e3f3819847c9097"
-			, "Sound\scenario\j2f.mp3", "cb39cf1328c978d50b3c9bab62d47f4a"
-			, "Sound\scenario\j2g.mp3", "c9f5245649c494d37e83880aeb64b4cd"
-			, "Sound\scenario\j2h.mp3", "762882378727b18ad1640055b59bd1e8"
-			, "Sound\scenario\j2i.mp3", "6dcb2690fa58148694ce218c8f6a3a68"
-			, "Sound\scenario\j2j.mp3", "d34fbc17e5387b33ff62d27338eb6f67"
-			, "Sound\scenario\j2k.mp3", "31c83627e1cf683991619a6b18a97698"
-			, "Sound\scenario\j2l.mp3", "0c7fca97e1c8fe350520f9a7406ca653"
-			, "Sound\scenario\j2m.mp3", "bce807c34c9634e5c30fd387efd5874c"
-			, "Sound\scenario\j2n.mp3", "6e6cc9190a51e18d4a7517144072dc10"
-			, "Sound\scenario\j2o.mp3", "d9de914470bb682bee15baed0827e6da"
-			, "Sound\scenario\j3a.mp3", "e63c232ffbbdf3f6f2047555dbe2e87c"
-			, "Sound\scenario\j3b.mp3", "9df5ab685259d94dd81b678b4a8d01ad"
-			, "Sound\scenario\j3c.mp3", "8261b0dca36c71248a2bf429ee933ee1"
-			, "Sound\scenario\j3d.mp3", "633ff11ff27440877cb4019f07f83af7"
-			, "Sound\scenario\j3e.mp3", "f5fa8a1489133bb01a88e02d909e86f5"
-			, "Sound\scenario\j3f.mp3", "2e3f4cd186294d04cc97f7697d6cd67b"
-			, "Sound\scenario\j3g.mp3", "7f5968b47ab1ac408d881090a703cf8e"
-			, "Sound\scenario\j3h.mp3", "eb673b82c62c5c8f678d986fd00e3467"
-			, "Sound\scenario\j3i.mp3", "d41746d7da1fcc8dc9b08dd296e62d78"
-			, "Sound\scenario\j3j.mp3", "a4ad3037be3ef5975107996d78c4ad1b"
-			, "Sound\scenario\j3k.mp3", "b82a327dfdd69f76d2b918970e526cdd"
-			, "Sound\scenario\j3l.mp3", "8d79219290c16aa701883d3013a98b95"
-			, "Sound\scenario\j3m.mp3", "b348adf85082ac548b821a2eaa0b5bc0"
-			, "Sound\scenario\j3n.mp3", "b586d3f6c64cf6a28c4dc7dcc2cb15ec"
-			, "Sound\scenario\j3o.mp3", "d5446b7ceefd4a394cac3f317ecbbb34"
-			, "Sound\scenario\j3p.mp3", "e6775f3ad28afe2aa4500f572c28e1be"
-			, "Sound\scenario\j4a.mp3", "3986ce7b08d8a29070dff7a07d5907cc"
-			, "Sound\scenario\j4b.mp3", "f20c07a2b4efa367b3921fa06d810616"
-			, "Sound\scenario\j4c.mp3", "23a21181c01fe21a6bfec164886d6afd"
-			, "Sound\scenario\j4c2.mp3", "1948b7ea5342455c12131d8d282fe6f8"
-			, "Sound\scenario\j4d.mp3", "fdeb5466157bf5970f7098d7e0c83e1d"
-			, "Sound\scenario\j4e.mp3", "22be0f44039d4db86480b9d16aca5637"
-			, "Sound\scenario\j4f.mp3", "abea062c3beaefcea2e89a71b4a19828"
-			, "Sound\scenario\j4h.mp3", "ba75dbbab3d748b0d7b5ad9b96e2c445"
-			, "Sound\scenario\j4i.mp3", "1a851705a9c4068133f90cf5163f0218"
-			, "Sound\scenario\j4j.mp3", "6e4b015286deb993303efefc48e4b9b2"
-			, "Sound\scenario\j5a.mp3", "2a2099669048500f58ec0ec34cc80796"
-			, "Sound\scenario\j5b.mp3", "5641ea4bc2a72b6c6e5fd119fe37ca37"
-			, "Sound\scenario\j5c.mp3", "65e8a02c65dd514f03fe7188c857031a"
-			, "Sound\scenario\j5d.mp3", "5b1d26d42827e060fd75bb99ae1baa5e"
-			, "Sound\scenario\j5e.mp3", "26668eeeca8e598fdfa571c1a30540f6"
-			, "Sound\scenario\j5f.mp3", "f8b5c099c0237ddffb4792ec30266a6e"
-			, "Sound\scenario\j5g.mp3", "cbc06f54c92ef3ef26e8628fb0f15d42"
-			, "Sound\scenario\j5h.mp3", "40d72d1830e2a6f92ea9ba0dedadfbe8"
-			, "Sound\scenario\j5i.mp3", "0bbbf015e452d05612ed40901649fd8d"
-			, "Sound\scenario\j5j.mp3", "e04873057bfe84098a4744976ee36c94"
-			, "Sound\scenario\j5k.mp3", "4c2bbc6361d162952fe806559c28f7c1"
-			, "Sound\scenario\j5l.mp3", "ccb8295008f78a6183d2679e81d800e6"
-			, "Sound\scenario\j6a.mp3", "e0b161d3d83981dd69ff418c94deb590"
-			, "Sound\scenario\j6a2.mp3", "681fdfd16138b9246928ad0925f05dd7"
-			, "Sound\scenario\j6b.mp3", "0820e450e31c52778f6131155023804e"
-			, "Sound\scenario\j6c.mp3", "32689b6942d425af58ccc9e430dc358f"
-			, "Sound\scenario\j6d.mp3", "c5e135b39a8d788a29642fc401087e44"
-			, "Sound\scenario\j6e.mp3", "63051150e2eb77e9d9fae78a6a34ac0a"
-			, "Sound\scenario\j6f.mp3", "81ae90eeab0f32ed0bc0e00cdfd91309"
-			, "Sound\scenario\j6g.mp3", "ac1dfbec90c2e246146aacd0ac8de258"
-			, "Sound\scenario\j6i.mp3", "0a6e1dc4c3930327541104878ca99908"
-			, "Sound\scenario\j6j.mp3", "cfb6e22337cf8c1cb9234ec33517f590"
-			, "Sound\scenario\j6k.mp3", "ee1644d42f946522485d6eb964b563d8"
-			, "Sound\scenario\j6l.mp3", "92a646942e65a96be06259f70601ff40"
-			, "Sound\scenario\j6m.mp3", "1f5e4fe4b85ddaec1f6dde96e7d69adb"
-			, "Sound\scenario\j6n.mp3", "91bf8b47ab23a1da8473fbfd460854db"
-			, "Sound\scenario\j6o.mp3", "e6c4401fba4933422c2c7488c5600f46"
-			, "Sound\scenario\j6q.mp3", "e2434544c306a3f889b9cdcf0dab505b"
-			, "Sound\scenario\m1a.mp3", "19aba20d55b8db36823db6173457666f"
-			, "Sound\scenario\m1b.mp3", "aa0e2dc7f251f25ab5298ec36b9c73f6"
-			, "Sound\scenario\m1c.mp3", "d6c6995e397f943d126e940e2648bf4f"
-			, "Sound\scenario\m2a.mp3", "d9018f7e5075093cbe0c65bbd9b5f7f3"
-			, "Sound\scenario\m2b.mp3", "1ba34b7a030c3e14dae4230bf67b50fe"
-			, "Sound\scenario\m2c.mp3", "a6d8b61d77e81d78f29f99fa95ff816b"
-			, "Sound\scenario\m2d.mp3", "77ca9d2562ece2fb747db4890de6abbf"
-			, "Sound\scenario\m2e.mp3", "eec2fc728497a8e2468ba0e5f7e039bf"
-			, "Sound\scenario\m2f.mp3", "42ad99b74f5411a7f1ca07f8b54085ed"
-			, "Sound\scenario\m2g.mp3", "4f35d945746a698c8133aee4f8d59869"
-			, "Sound\scenario\m2h.mp3", "c1edfa9650122b3e187f5cd97d96dc55"
-			, "Sound\scenario\m2i.mp3", "2b21bb3261475393c93b88bc9e396418"
-			, "Sound\scenario\m2j.mp3", "e42da8f6b9cdbb899688916850f744f9"
-			, "Sound\scenario\m2k.mp3", "d26f45645046ef11c33a595c2246d54b"
-			, "Sound\scenario\m2l.mp3", "826811bf638797edd9a5b95eba6b8342"
-			, "Sound\scenario\m2m.mp3", "8d6670857f973d5abf4cac36f8977cb6"
-			, "Sound\scenario\m2n.mp3", "76c333183fe86e12e46e38f8c6281333"
-			, "Sound\scenario\m2o.mp3", "2ecd456601f476efeb00005525015682"
-			, "Sound\scenario\m2p.mp3", "0acfccb4bdd4752d688516072e6d4697"
-			, "Sound\scenario\m2q.mp3", "6cf801e8ef4ca50975b443e1a91605ea"
-			, "Sound\scenario\m3a.mp3", "6923cf1c11f97c9ff2c0bced6011674a"
-			, "Sound\scenario\m3b.mp3", "d077182baa5168cb8874b21b4f6971a9"
-			, "Sound\scenario\m3c.mp3", "617163083b1268c3f16b5be3dceab446"
-			, "Sound\scenario\m3d.mp3", "d9c42f581e657b4743b482211c904449"
-			, "Sound\scenario\m3e.mp3", "2c81df03ec233e0f50886aa0b4c389dc"
-			, "Sound\scenario\m3f.mp3", "7905396efd95068be529633e81df6b2a"
-			, "Sound\scenario\m3g.mp3", "cf9a6452ac4d5e1f4d37365f0dec2a29"
-			, "Sound\scenario\m3h.mp3", "212932819f557a908e6ebdc1f73cd91e"
-			, "Sound\scenario\m3i.mp3", "74fe7cc49838935c4ac537eb90ea1053"
-			, "Sound\scenario\m3j.mp3", "21c8606243bc8d0a048554f66cca93b4"
-			, "Sound\scenario\m4a.mp3", "00d2e94adb3c504232682180dc5b1d7c"
-			, "Sound\scenario\M4B.mp3", "283f83ed0be822b0062fb69510f3bb70"
-			, "Sound\scenario\M4C.mp3", "59f34f9a4e2b3d387779cc897cc11cfa"
-			, "Sound\scenario\m4d.mp3", "8298978d91c774f9be849982a06ecee1"
-			, "Sound\scenario\m4e.mp3", "f3f74134c03af18a1769a1bd3bf7d279"
-			, "Sound\scenario\m4f.mp3", "30ce43e541bf19ed396401ead879974e"
-			, "Sound\scenario\m4g.mp3", "afacb3ea3b7f001ea98b62dbc4fed4fa"
-			, "Sound\scenario\m4h.mp3", "237b6fd94af966df681629f74acbf1bb"
-			, "Sound\scenario\m4i.mp3", "d3c15f9fe5b9a5bcbf817da2596bc736"
-			, "Sound\scenario\m4j.mp3", "03e16b420d129a88e74abbc6521c67ec"
-			, "Sound\scenario\m4k.mp3", "f1383aa39dba76a121a64128d192fa1a"
-			, "Sound\scenario\m4m.mp3", "21bf61abe722f53bc859d721984937f2"
-			, "Sound\scenario\m5a.mp3", "c8cd8f31268d1db508a84c6694be0c40"
-			, "Sound\scenario\m5b.mp3", "17ab46f8f3272e1aa9dfe0ffb1087b01"
-			, "Sound\scenario\m5c.mp3", "993a0d69eff986b8a03ff33ff8c9e3de"
-			, "Sound\scenario\m5d.mp3", "8379f25fa3d131fe53ddc673e71632f3"
-			, "Sound\scenario\m5e.mp3", "137269f014d62299cce0bdd7396546b8"
-			, "Sound\scenario\m5f.mp3", "94581e64bcb9d3ed72b6de67fa36e4ec"
-			, "Sound\scenario\m5g.mp3", "86ae5cce3d66fc0f9b7155e409044bdc"
-			, "Sound\scenario\m5h.mp3", "c1857d31dbfa22d72c9665f4d687e3f7"
-			, "Sound\scenario\m6a.mp3", "d578fffd9344b25154858a6d14844628"
-			, "Sound\scenario\m6b.mp3", "8f56202badb62296e9e94c9a1b699a2b"
-			, "Sound\scenario\m6c.mp3", "ec41d671851954bdce85c99b4a28ad7e"
-			, "Sound\scenario\m6d.mp3", "eed6d64d8ee83357987fd0113f56799b"
-			, "Sound\scenario\m6e.mp3", "f1b67cb2c9c84b3fa119e4f395e57519"
-			, "Sound\scenario\m6f.mp3", "1a25954e58508aed1dabe5062c23a880"
-			, "Sound\scenario\mc6.mp3", "bc17fa77c02ba6967542238daf8b5b57"
-			, "Sound\scenario\S1a.mp3", "427eb8759f1742deb8eb412cdd901c9b"
-			, "Sound\scenario\s1b.mp3", "62c2e010c6baedd1d07fc45c4f5d3dff"
-			, "Sound\scenario\s1c.mp3", "40732aa98607cf6537250796ebb86c20"
-			, "Sound\scenario\s1d.mp3", "d669d70270d806afdb96973dc53c7577"
-			, "Sound\scenario\s1e.mp3", "346e6ade046871fb5e577a90694171be"
-			, "Sound\scenario\s1f.mp3", "9dc419cdc5192ba6e50f1cae9f16cc16"
-			, "Sound\scenario\s1g.mp3", "d6ce03b782a4fd5b565066d161d8df7e"
-			, "Sound\scenario\s1h.mp3", "20287cf26f85729298ae0ee2e680b595"
-			, "Sound\scenario\s1i.mp3", "07959050249247387075c141ac9f0439"
-			, "Sound\scenario\s1j.mp3", "0ca24260f8cd91a0d0a3500397a67136"
-			, "Sound\scenario\s2a.mp3", "3c69d752ed6379504756af28c2111a43"
-			, "Sound\scenario\s2b.mp3", "e0c622db60616efb1b82b2e3f08f518b"
-			, "Sound\scenario\s2c.mp3", "af377c2a8058d122d027309a8a8b80f5"
-			, "Sound\scenario\s2d.mp3", "b76cd619639a31ec7c664ba27b1c1f21"
-			, "Sound\scenario\s2e.mp3", "33f641b8360f12669344bc5c3bf222ce"
-			, "Sound\scenario\s2f.mp3", "8c662f2e83f32f5a6b324cbe2c5a496d"
-			, "Sound\scenario\s2g.mp3", "0c8dcac66d85a6cca10bf187ebea16fe"
-			, "Sound\scenario\s2i.mp3", "0e43f08b32be259ae48c9384b362d406"
-			, "Sound\scenario\s2j.mp3", "141bd0cc0c907cd409df9efeed2bda46"
-			, "Sound\scenario\s2l.mp3", "5dd6fd0174e2f3469c62ce955c214bf4"
-			, "Sound\scenario\s3a.mp3", "a2b7e801494f39c6886ba47c6076d8dc"
-			, "Sound\scenario\s3b.mp3", "b97de595ef9633cdbc7b27b2a2bf99b5"
-			, "Sound\scenario\s3c.mp3", "26d4661f02a98cb907f0f786ac99043d"
-			, "Sound\scenario\s3d.mp3", "c985dd9f770bf2590a98e4975787a7fc"
-			, "Sound\scenario\s3e.mp3", "6b9d969a287361457466206a38f8ccae"
-			, "Sound\scenario\s3f.mp3", "c75f33f70313e1425e6d7f32ddb2e45b"
-			, "Sound\scenario\s4a.mp3", "b570721a27ec08e4bab160975167f761"
-			, "Sound\scenario\s4b.mp3", "cdc884d325d5b65e7824fe5351698482"
-			, "Sound\scenario\s4c.mp3", "e20f333616f499e643696e3e25a20360"
-			, "Sound\scenario\s4d.mp3", "c0c9c5259b321fa7e033d5c3b6691ae3"
-			, "Sound\scenario\s4e.mp3", "9629c0f073a4b3178be7451462e955c5"
-			, "Sound\scenario\s4f.mp3", "12a1888e4eb899a1bdfdf40eba146008"
-			, "Sound\scenario\s4g.mp3", "ab19b41bc1f61af68381af15390f6a16"
-			, "Sound\scenario\s4h.mp3", "522337b526d11218538c9c666783c23c"
-			, "Sound\scenario\s4i.mp3", "b2bcf3f686f2fb1ded70176bb3a4db6e"
-			, "Sound\scenario\s4j.mp3", "a62dc42ff1323d699d1105e79315b416"
-			, "Sound\scenario\s4k.mp3", "3490d52ecb725577f486ee3fca7363f7"
-			, "Sound\scenario\s4l.mp3", "1fe896db4117c4e7e52e8a5d2fb53050"
-			, "Sound\scenario\s4m.mp3", "891aff3fbb2aed2e779b0c831d054345"
-			, "Sound\scenario\s5a.mp3", "eca3b0c3c096adf3bd4cda01ef250ff2"
-			, "Sound\scenario\s5b.mp3", "22f287b01c9382507236b46c4d799fc3"
-			, "Sound\scenario\s5c.mp3", "52f73ee46dadb048c7f5328ff48e49f0"
-			, "Sound\scenario\s5d.mp3", "2c01cdf6cc1d14d14d491dddb32e93fb"
-			, "Sound\scenario\s6a.mp3", "62c67bdc350f2a1b6e9be64f25dc25b8"
-			, "Sound\scenario\s6b.mp3", "d2a50dd4373bddf40f820b547191ba4e"
-			, "Sound\scenario\s6c.mp3", "876ddb184505bbf76e511a253a9b1794"
-			, "Sound\scenario\s6d.mp3", "3ede0843bcf8e0247ae2d5740a89dda5"
-			, "Sound\scenario\s6e.mp3", "f19f75cf0e05ac3adc2497bb80de23df"
-			, "Sound\scenario\s6f.mp3", "210fb9916fc8ca05c96d4d13d6486bee"
-			, "Sound\scenario\s6g.mp3", "08580b694f723510bd6984429d0b1cb6"
-			, "Sound\scenario\s6h.mp3", "21b68a3e04249ddaf8bd72636379364f"
-			, "Sound\scenario\s6i.mp3", "68a7be2448a98f3de285f28acfd3d123"
-			, "Sound\scenario\w1a.mp3", "e0dbd3d67180354ccd740573208b00cc"
-			, "Sound\scenario\w1b.mp3", "90582fcdbe87b7e88cdbec82328924e4"
-			, "Sound\scenario\w1c.mp3", "519181721318aa6d8b96517a5f98ce6c"
-			, "Sound\scenario\w1d.mp3", "235d8d787165fc7b934440e70fe7775b"
-			, "Sound\scenario\w1e.mp3", "ddac1303268d283de0647ff39c19330f"
-			, "Sound\scenario\w1f.mp3", "a05e18ae745f8a13c56524b67044e47c"
-			, "Sound\scenario\w1g.mp3", "d05fe3be3e0239cfdb58373737555ef7"
-			, "Sound\scenario\w1h.mp3", "735fe25a981bcd47f81fa61c4aa90225"
-			, "Sound\scenario\w1i.mp3", "2d459d74c059c216c971fa200dafcf59"
-			, "Sound\scenario\w1j.mp3", "cc82a9d269e02f7f4ae96169dcc3e984"
-			, "Sound\scenario\w1k.mp3", "6293f9a91c2de1f069ea659a2db0cc4e"
-			, "Sound\scenario\w1l.mp3", "d7367741acd79b237c2c13b6baf3362c"
-			, "Sound\scenario\w1m.mp3", "a4c973a0b17d5423c656ea907dd0a002"
-			, "Sound\scenario\w1n.mp3", "3232b89ae9fefbf24fb43e5d3310cd3e"
-			, "Sound\scenario\w1o.mp3", "845c2fcf0ed373bad9eb8d954dce9c1c"
-			, "Sound\scenario\w1p.mp3", "7cc2047d4d2bc9a138ce03a061c613a9"
-			, "Sound\scenario\w1q.mp3", "25566cef7a0f1ab8a8b78eb62e3e9992"
-			, "Sound\scenario\w1r.mp3", "a085de101721d64e5edc9e9fbbf57ec9"
-			, "Sound\scenario\w1s.mp3", "8c3020fb0b550599e9643d51d5c5f061"
-			, "Sound\scenario\w1t.mp3", "0d3d64ae178961c5370a1fbcf8171219"
-			, "Sound\scenario\w1wa.mp3", "b2c2af7a1dd3c317a32987f0eb0a8a2b"
-			, "Sound\scenario\w1wb.mp3", "301b318335b5a64bdb5c554e9c6d425a"
-			, "Sound\scenario\w1wc.mp3", "6b0d5e4a3a7d4829613c097c19894319"
-			, "Sound\scenario\w2a.mp3", "0cb0f830a7f43f9ab4dc654199e509db"
-			, "Sound\scenario\w2aa.mp3", "6a7248fc421c880061a9645c1beb31b3"
-			, "Sound\scenario\w2b.mp3", "906ab246b5ae75f3828c7b1cd06c92b9"
-			, "Sound\scenario\w2c.mp3", "14823550e16250a10abbce5999983a1e"
-			, "Sound\scenario\w2d.mp3", "35dfeec0a6c43b82075d5eaf41e1d240"
-			, "Sound\scenario\w2e.mp3", "086f87d0e1e8da9c39ddbfdde230e84d"
-			, "Sound\scenario\w2f.mp3", "a0e887c4ae8726abcf4208fe57bdc8da"
-			, "Sound\scenario\w2g.mp3", "c02370d0020ffa54f34f0d38a26123fe"
-			, "Sound\scenario\w2h.mp3", "31b0447eec80bf9038009bd6ef6e30e1"
-			, "Sound\scenario\w2i.mp3", "5fe21bf70b7bb551572079dc5010857a"
-			, "Sound\scenario\w2j.mp3", "a56ad704d224b9090de564abcaf4f856"
-			, "Sound\scenario\w2k.mp3", "bdd9aeb75801fed61fc52ae45c4863f8"
-			, "Sound\scenario\w2wa.mp3", "762b4503e7650e261e07bfbf62ebf74c"
-			, "Sound\scenario\w3a.mp3", "1b21bbd283a58b31c6188ec5a1345dd3"
-			, "Sound\scenario\w3b.mp3", "9213f5ce3c1e6a8c8b26066936e113f4"
-			, "Sound\scenario\w3c.mp3", "be7e3b0022ab2ee72449289426b0bbd5"
-			, "Sound\scenario\w3d.mp3", "c6f0ac8c76af540e418fd21319627e1e"
-			, "Sound\scenario\w3e.mp3", "007e77c967be29fdf392424595b55873"
-			, "Sound\scenario\w3e2.mp3", "533b894140a63240644f2341b211274b"
-			, "Sound\scenario\w3f.mp3", "7f6afedb902329dfa058a3eb1d703828"
-			, "Sound\scenario\w3g.mp3", "a31c40aa13c426bcc98558d77157d7d2"
-			, "Sound\scenario\w3h.mp3", "d78b3af24bf4c1c586b5ca5fe338019f"
-			, "Sound\scenario\w3i.mp3", "16a9f27a0d29d352d4521fe42e2826b6"
-			, "Sound\scenario\w3j.mp3", "7213536ceacda2f8c85f3bcf13257f44"
-			, "Sound\scenario\w3k.mp3", "c19cb06195d774a0acf68ea9fed6cd40"
-			, "Sound\scenario\w3l.mp3", "c8017ecca7d26b03dc503c4e74888780"
-			, "Sound\scenario\w3m.mp3", "bff84134054f3a85a5b1f2971f393b27"
-			, "Sound\scenario\w3n.mp3", "be0df8dacfb13fdf6e123207d243ef9c"
-			, "Sound\scenario\w3o.mp3", "d4450de19b939fe737b2f95046a4b028"
-			, "Sound\scenario\w3wa.mp3", "3ed4e6a955a1435768604f6e4b10de43"
-			, "Sound\scenario\w4a.mp3", "cc4149edf7b121ae0f26bf0b17d9f642"
-			, "Sound\scenario\w4b.mp3", "ecccbfde031485eef5242b6a2916032c"
-			, "Sound\scenario\w4c.mp3", "91f80e38b31bc268b550e0a3915d96ed"
-			, "Sound\scenario\w4d.mp3", "784568993c98272e8fbad619f15ddd6c"
-			, "Sound\scenario\w4e.mp3", "84bdb5be1145a899fdb46ffddec34e0a"
-			, "Sound\scenario\w4f.mp3", "7b3334c8831ac7057a567d2574438315"
-			, "Sound\scenario\w4g.mp3", "7c0cb6a2d6063344349b8f4e0ae332aa"
-			, "Sound\scenario\w4h.mp3", "b0f66a4eba776fd417e8ae55a6f3fd6c"
-			, "Sound\scenario\w4i.mp3", "efbb6eda9f243ac00325d136f7c13f78"
-			, "Sound\scenario\w4j.mp3", "fe173375e96d3ad29d425ad8649c8edd"
-			, "Sound\scenario\w4k.mp3", "19f86b09219b0879df7c62de8a65ecef"
-			, "Sound\scenario\w4l.mp3", "def8c172dba556d84c7a960af82bc9c4"
-			, "Sound\scenario\w4m.mp3", "dc5c41b269567b10d7af47e0a0ffba7f"
-			, "Sound\scenario\w4n.mp3", "8d2b22c483d1f47d2e49aed64248513a"
-			, "Sound\scenario\w4o.mp3", "392d5ea9868934b59e94eefd57e2b724"
-			, "Sound\scenario\w4p.mp3", "a76b360456cd6fb3bd71accb2613d91f"
-			, "Sound\scenario\w4q.mp3", "69ea65a29bcc3e2cbe95d645f5caa09f"
-			, "Sound\scenario\w4wa.mp3", "a1596869d50e1f3b246d9921f972e956"
-			, "Sound\scenario\w4wb.mp3", "dcf4ffd8fa07268241f06617a724e7e8"
-			, "Sound\scenario\w4wc.mp3", "4801fe37ed6b325576c8e42522a8533c"
-			, "Sound\scenario\w5a.mp3", "4758a80f53f83d3052aafb1ef637e20a"
-			, "Sound\scenario\w5a2.mp3", "732f46c5fad208d049bfcbf9437b973b"
-			, "Sound\scenario\w5b.mp3", "5e834193289b2795b5c0f46ddac9d4e2"
-			, "Sound\scenario\w5c.mp3", "4b98ea28a3c0423d191579f7d982ce47"
-			, "Sound\scenario\w5d.mp3", "a95950c100c268fccc96648e51b50d32"
-			, "Sound\scenario\w5e.mp3", "250b90c20dc501894507e5f4530ba469"
-			, "Sound\scenario\w5f.mp3", "b474b2c07e5e7a769bc83e6ae9541805"
-			, "Sound\scenario\w5g.mp3", "9f010202333680b22fefede5d3869a0a"
-			, "Sound\scenario\w5h.mp3", "b5bdf44fa647f4967e370ce4ba8dbaf9"
-			, "Sound\scenario\w5i.mp3", "b40a0ac939689be3584c704cef3a63f6"
-			, "Sound\scenario\w5j.mp3", "f9819f244df6e782077b25534da56126"
-			, "Sound\scenario\w5k.mp3", "e0c25101a68058827d5a4c37869534f3"
-			, "Sound\scenario\w5l.mp3", "bd78f1e22760946aa3909a36e580ee6a"
-			, "Sound\scenario\w5m.mp3", "a457981198f487f6a20037f3689a5f55"
-			, "Sound\scenario\w5n.mp3", "c226aebb1f2aaba528c3e7e58679d499"
-			, "Sound\scenario\w5o.mp3", "4ae88f1741397ed33835cc60d2f9fbc7"
-			, "Sound\scenario\w5p.mp3", "9e3372e3b30679b43c5523658cc7bdfb"
-			, "Sound\scenario\w5q.mp3", "14262fcf6715e18889855d489b4641c7"
-			, "Sound\scenario\w5r.mp3", "ae0c28ca730ad0c1f74c5de8bc32b842"
-			, "Sound\scenario\w5s.mp3", "07016f8448c4c0e1236ef55f2ba479dd"
-			, "Sound\scenario\w5t.mp3", "b850f2a4af4f12d9ea007a62bd9db1f8"
-			, "Sound\scenario\w5u.mp3", "265240b11804a96c17472d3e6021e289"
-			, "Sound\scenario\w5v.mp3", "152b2a17557b65d917f25faec8141696"
-			, "Sound\scenario\w5w.mp3", "33bce9db40ce5e4e52b76c4bb96df23e"
-			, "Sound\scenario\w5wa.mp3", "ed5b63d8b648f7d894415551fa06c07b"
-			, "Sound\scenario\w5wd.mp3", "41c3af25bb9ceff96ef2a4d0b101f845"
-			, "Sound\scenario\w5we.mp3", "de22657be1a4298fe96d9e741c76949e"
-			, "Sound\scenario\w5wf.mp3", "b00cadb3607157996fe69a66f44f4387"
-			, "Sound\scenario\w5wg.mp3", "b2cb7b8df70e751a1bbf1d0aacb587c1"
-			, "Sound\scenario\w5wh.mp3", "f4ceb27a7199327d40d2bf6563bce23d"
-			, "Sound\scenario\w5x.mp3", "632de94d5f4108fad3b06daa5143335a"
-			, "Sound\scenario\w5y.mp3", "ab8a5c0eca4039f9a638efe6a1f65cb1"
-			, "Sound\scenario\w5z.mp3", "0bdc6430d8f1bc87d93db434fcadec96"
-			, "Sound\scenario\w5z2.mp3", "3e12ecfa40cebeb7b2d973ae34cbeaa5"
-			, "Sound\scenario\w5z3.mp3", "b021be6c16027e494901d7c7cc23a5c8"
-			, "Sound\scenario\w5z4.mp3", "9425ae125cd4385dd937065990736a41"
-			, "Sound\scenario\w6a.mp3", "17801bf5864dc31ffdac72f49ec51728"
-			, "Sound\scenario\w6b.mp3", "7f2aeed7339522ec8a886eda741d04be"
-			, "Sound\scenario\w6c.mp3", "3090605bf69b6b38ef57a17360505736"
-			, "Sound\scenario\w6d.mp3", "a7898594d66e0096c904e4cc310e1521"
-			, "Sound\scenario\w6e.mp3", "80e81d5a5f802c99b10a20d0ad4b6524"
-			, "Sound\scenario\w6f.mp3", "ee18d63cb2fd6e816ef75e352566fd04"
-			, "Sound\scenario\w6g.mp3", "9268458bc173cef718513c847d950a5e"
-			, "Sound\scenario\w6h.mp3", "fc9859c4a968f774d97818754a530a63"
-			, "Sound\scenario\w6i.mp3", "6e6151aaa84d62cb61961449ec45ea22"
-			, "Sound\scenario\w6j.mp3", "9fd58c88d4d24a119c46f086a72b94ee"
-			, "Sound\scenario\w6k.mp3", "d2abb2d72413e01ab5f55e2e5ca69654"
-			, "Sound\scenario\w6l.mp3", "ed11f14ef72333139bbf40a3dbc9e44a"
-			, "Sound\scenario\w6m.mp3", "8cb6551eef46f73c8000bc080660a655"
-			, "Sound\scenario\w6n.mp3", "c1a93ff888c9832e27213572625532f0"
-			, "Sound\scenario\w6o.mp3", "e2ecb70c27ff3fe9f763d8518f807e43"
-			, "Sound\scenario\w6p.mp3", "817bbbdd45894e2b6107710f3928c730"
-			, "Sound\scenario\w6q.mp3", "176a5361e1806febbbfe498878ecad9c"
-			, "Sound\scenario\w6r.mp3", "f8e397f7616cdd88ab77725beb66ed05"
-			, "Sound\scenario\w6s.mp3", "2382ebe4d277877f366fa88fa3872790"
-			, "Sound\scenario\w6t.mp3", "4c0f2aed47192e9f811264fcf7671338"
-			, "Sound\scenario\w6u.mp3", "5e59d9d47d95fc3a3a81591653ce1a58"
-			, "Sound\scenario\w6v.mp3", "b018827f53375d4c9928c79461567d8d"
-			, "Sound\scenario\w6w.mp3", "3c7369016c0af630d33fb03ad3e3c162"
-			, "Sound\scenario\w7a.mp3", "980dba40a09739a4dbf6b75020cc2af3"
-			, "Sound\scenario\w7b.mp3", "f1a2f81122499c4a7a36899ebcadc779"
-			, "Sound\scenario\w7c.mp3", "37e56d24e5406e21f46500ae867faed1"
-			, "Sound\scenario\w7d.mp3", "92c4bcff44267189320d6edf4ae3ad62"
-			, "Sound\scenario\w7e.mp3", "fb77251e1847097159186db2bbd9c836"
-			, "Sound\scenario\w7f.mp3", "ebcd19d14a021c26b3087e39d3ff8302"
-			, "Sound\scenario\w7g.mp3", "80d66745c788c7f8a1acae65506bdb12"
-			, "Sound\scenario\w7h.mp3", "9b0991fb07bfe5c7f2aca57d155a7065"
-			, "Sound\scenario\w7i.mp3", "e81506fa00e52aa44a5e8c2f62230605"
-			, "Sound\scenario\w7j.mp3", "4767d9e4894502a0eeebc636dc2d5d38"
-			, "Sound\scenario\w7k.mp3", "204df51d6727c0832f073279463eb2bc"
-			, "Sound\scenario\w7l.mp3", "33dc4b3e2946fcd3ffc944879f8944e6"
-			, "Sound\scenario\w7m.mp3", "64ad7b3fa7d3fe16fee6deddc7bc1dc9"
-			, "Sound\scenario\w7n.mp3", "d4f9ef674843b7f6b9d60827444e7c39"
-			, "Sound\scenario\w7o.mp3", "8edc2af9f064a7f95ee7c6ca92029f2c"
-			, "Sound\scenario\w7p.mp3", "b23d3197db832cf317398f4ee2d23e1a"
-			, "Sound\scenario\w7q.mp3", "e2b2160c86bb28d2ea07741cfffe8125"
-			, "Sound\scenario\Wolf.mp3", "93875c9c5abdc1fd692d9ecf76c6c997"
-			, "Sound\stream\Aztecs.mp3", "2a1e9eddab0c69b6c3dc80be399bc1d5"
-			, "Sound\stream\British.mp3", "bbb430972a2692f23db71f5237184e54"
-			, "Sound\stream\Byzantin.mp3", "5351a583720eda3581019d1355862605"
-			, "Sound\stream\Celt.mp3", "fde2c33653b61bf3219aa74c6b48dde6"
-			, "Sound\stream\Chinese.mp3", "70b076eb93e254f54738a2f25cd9f40d"
-			, "Sound\stream\Countdwn.mp3", "549c4d32e6d4aa753a761a4ac535da51"
-			, "Sound\stream\credits.mp3", "93d7127902695980c5c448139c141f2f"
-			, "Sound\stream\French.mp3", "cf0a574ac702e6f50a96fc107471d787"
-			, "Sound\stream\Goth.mp3", "92b4605555c136db023450f4f2c7ae48"
-			, "Sound\stream\Huns.mp3", "cc0bdde1d4e93da921eaaeac2d12f22a"
-			, "Sound\stream\Japanese.mp3", "0c6c9b410cbaed313d5599a5de2c966e"
-			, "Sound\stream\Koreans.mp3", "ab4d47be9e2acf9d88b28144ad5d95f5"
-			, "Sound\stream\lost.mp3", "797a9e331fcf1597fb6395b61eef431b"
-			, "Sound\stream\Mayans.mp3", "bca9982d5d74c3ee67f139bc9b8deae3"
-			, "Sound\stream\Mongol.mp3", "c1fc63519e95b9534542f0376f7c4bbb"
-			, "Sound\stream\open.mp3", "b6cda672b2cbd52d6e8e62e0e079656e"
-			, "Sound\stream\Persian.mp3", "726d886d1c6139ca5b15e89b2224b9c2"
-			, "Sound\stream\Random.mp3", "a8f8818d82e03f1b7e575b83f4a874ff"
-			, "Sound\stream\Saracen.mp3", "73d2d2ddc65a673ea2f3ab3e6c266b90"
-			, "Sound\stream\Spanish.mp3", "a86ba4663fe7623ea0b8235f14b120ca"
-			, "Sound\stream\Teuton.mp3", "cb83c736445dfa2462584b6cae3b32a6"
-			, "Sound\stream\town.mp3", "7a6571d80f58ffa0de1ee44a61a3638f"
-			, "Sound\stream\Turk.mp3", "62c4366bd1206ddb52bb051cb76b9adc"
-			, "Sound\stream\Viking.mp3", "74ceb3b3126abc50ad417358702fa266"
-			, "Sound\stream\won1.mp3", "03a16fafa2cdc2dd0c3f22da4d41c2e9"
-			, "Sound\stream\won2.mp3", "1318ed6c0797792d8329aa56131bfa08"
-			, "Sound\stream\xcredits.mp3", "410e764226ec75d0f5d5c987909484be"
-			, "Sound\stream\xopen.mp3", "8bd683ec9ecb239f523a364fb174953b"
-			, "Sound\stream\xtown.mp3", "866432525eb045ecef2b18be1ff218a5"
-			, "Sound\terrain\Cricket.wav", "8e0b6cbbe95cf8e729402ab9e6a6c39a"
-			, "Sound\terrain\jungle1.wav", "175e7b00a45fc447ccdfe17af4c56614"
-			, "Sound\terrain\jungle2.wav", "56f66ae889ff414d40c3cf1bb35ac16f"
-			, "Sound\terrain\jungle3.wav", "173f94ba01ecdb3db65971a7748e5bf9"
-			, "Sound\terrain\jungle4.wav", "1f60dca59726958f8479835c41dbb06b"
-			, "Sound\terrain\tf1.wav", "b825f5176313782ef3e90e15442dbf27"
-			, "Sound\terrain\tf2.wav", "11902017c799cbcebb9a43804cce5ec6"
-			, "Sound\terrain\tf3.wav", "a0ab25cc832833f756813753ef1b3d09"
-			, "Sound\terrain\tf4.wav", "adb91cd90089ea5d588499aaaf057d71"
-			, "Sound\terrain\tf6.wav", "2fc6c13e840c9a7611507b5127367c97"
-			, "Sound\terrain\tf7.wav", "4ea16fd8aa8c863cb93020418b0b23e8"
-			, "Sound\terrain\tf8.wav", "1e7d43d0d4a158e8d21ca060b7b32259"
-			, "Sound\terrain\Wave1.wav", "045ee21f421e9989ca36742495fe7498"
-			, "Sound\terrain\Wave2.wav", "de027167b2796d003b71223ea6b93464"
-			, "Sound\terrain\Wave3.wav", "0dc1b7acb2062f11b9a0e8a3b7351525"
-			, "Sound\terrain\Wave4.wav", "4be65d260ad67a12d2b939ef31930193"
-			, "Sound\terrain\Wave5.wav", "3444fcd4ff66e0b1b94b520ac12b4806"
-			, "Sound\terrain\Wind1.wav", "b2b9834c45e9cd1061cd049b4a026748"
-			, "Sound\terrain\Wind2.wav", "7187d56f9c9f11df4adb04fee03d4166"
-			, "Sound\terrain\Wind3.wav", "3304ae438d165745664e6ff39dc7ae82"
-			, "Support\Support.txt", "c5113b77145a3f5823f307f67d308ce0"
-			, "Support\The Conquerors - MFill.lnk", "2cbe9982817464377039e9799f4d7777"
-			, "Support\The Conquerors - MSync.lnk", "028f2426e2a68c236c3071c677fccc1e"
-			, "Support\The Conquerors - NoMusic.lnk", "127786e95779bb688e3c4b3dea9666f7"
-			, "Support\The Conquerors - NormalMouse.lnk", "3f36631a1c36bf4ad850bfa5c9297c85"
-			, "Support\The Conquerors - NoSC.lnk", "c926cacae949ec4e8898f71e4a7cc5a5"
-			, "Support\The Conquerors - NoSound.lnk", "6e2b32d4c66d1facc220e3f46a726fa7"
-			, "Support\The Conquerors - NoStartup.lnk", "981d0e3a4135b1f07f80699640bf5552"
-			, "Support\The Conquerors - NoTerrainSound.lnk", "b2f6541c22f5f94a65a6dfee932c5a1c"
-			, "Taunt\01 Yes.mp3", "00c91d545925e20e3c925fa7fb688c74"
-			, "Taunt\02 No.mp3", "0ca0227dfb8a560effe1ffa0a83c4fbe"
-			, "Taunt\03 Food, please.mp3", "9adb15d26a49668999b4c31379653042"
-			, "Taunt\04 Wood, please.mp3", "bf572e0c4dc6f490611c982a5b917df3"
-			, "Taunt\05 Gold, please.mp3", "1e16cae74e32e297212a9fd9a280ffcc"
-			, "Taunt\06 Stone, please.mp3", "2416b1e864aa0e7094566cb0a793b47e"
-			, "Taunt\07 Ahh.mp3", "536842e9989854dc0f876cdd53d16964"
-			, "Taunt\08 All hail.mp3", "35efb861ad101db15a8fe1ff016e0f1a"
-			, "Taunt\09 Oooh.mp3", "9e0218de449f94ab94a31652e6b606a4"
-			, "Taunt\10 Back to Age 1.mp3", "855604066c506d56d8feb47b0d181fc2"
-			, "Taunt\11 Herb laugh.mp3", "a1df5946c13819ef82d7fa91284105df"
-			, "Taunt\12 Being rushed.mp3", "31b64f7499a538864812a599d85ad6ea"
-			, "Taunt\13 Blame your isp.mp3", "0185d001cf807dfb65717d4788fc7634"
-			, "Taunt\14 Start the game.mp3", "24ff496ef2e68704dfb8ffccd1028154"
-			, "Taunt\15 Don't Point That Thing.mp3", "cfb85f535bff7a3680f1977b72f27467"
-			, "Taunt\16 Enemy Sighted.mp3", "782b40a1efa3599df70d2a79942bdcb0"
-			, "Taunt\17 It Is Good.mp3", "4644f922db920556a92a7197a048214f"
-			, "Taunt\18 I Need a Monk.mp3", "fcaa127c9dbb09f2727e2753e52d33d9"
-			, "Taunt\19 Long Time No Siege.mp3", "0e151f695f5853472d31347d8b1d4735"
-			, "Taunt\20 My granny.mp3", "e52e7e2fd6501cf42e747eab16c7957d"
-			, "Taunt\21 Nice Town I'll Take It.mp3", "bd72dd3ef910c43d711aa68702073a77"
-			, "Taunt\22 Quit Touchin.mp3", "9140913718f5f347f5b5576a5df0eb43"
-			, "Taunt\23 Raiding Party.mp3", "9794b54617f08ab82f71cc3545c6141a"
-			, "Taunt\24 Dadgum.mp3", "0321f8cdf782dc2333e3f284a44b250f"
-			, "Taunt\25 Smite Me.mp3", "1b977eaf856bd073032b22b39186ceb2"
-			, "Taunt\26 The wonder.mp3", "c46f7c9864083e6319c379821739cd22"
-			, "Taunt\27 You play 2 hours.mp3", "bc038b3a9b05173d3bf8b1ddd9c1b49a"
-			, "Taunt\28 You Should See the Other Guy.mp3", "8d702de96d061c16bf5f49062761877e"
-			, "Taunt\29 Roggan.mp3", "a892f0f9cb1a40201e4016f4aa151a1e"
-			, "Taunt\30 Wololo.mp3", "e16b02fe3e47b47bd11410a73ae9c695"
-			, "Taunt\31 Attack an Enemy Now.mp3", "b18123a03e65fb3fd05955e7881460ff"
-			, "Taunt\32 Cease Creating Extra Villagers.mp3", "8e0acb2f0908ad815523cb0f863e3763"
-			, "Taunt\33 Create Extra Villagers.mp3", "f5307c44e563d0f5dea2c67735498d98"
-			, "Taunt\34 Build a Navy.mp3", "4da45012d34ef7b808068ee146cc2004"
-			, "Taunt\35 Stop Building a Navy.mp3", "7b0463c136d5f81fe27b56cb2e003bdc"
-			, "Taunt\36 Wait for My Signal to Attack.mp3", "304bce29b2a251bbfc7a0f622eb9054d"
-			, "Taunt\37 Build a Wonder.mp3", "bd529a007bd54b76fd4a5dec61fd1d0f"
-			, "Taunt\38 Give Me Your Extra Resources.mp3", "b2e3beb22b78afed18b385af7eda85aa"
-			, "Taunt\39 Ally.mp3", "4e66df46aa079a1793b33b78b964f960"
-			, "Taunt\40 Enemy.mp3", "bf144f36566cc6db383ec8158e49514e"
-			, "Taunt\41 Neutral.mp3", "3a2079f68352898837b264d6565ab46c"
-			, "Taunt\42 What Age Are You In.mp3", "aee3e4209b9f8fbe076a9226e612b247")
+; ======================================================================================================================
+; Name:              CreateImageButton()
+; Function:          Create images and assign them to pushbuttons.
+; Tested with:       AHK 2.0.11 (U32/U64)
+; Tested on:         Win 10 (x64)
+; Change history:    1.0.01/2024-01-01/just me   - Use Gui.Backcolor as default for the background if available
+;                    1.0.00/2023-02-03/just me   - Initial stable release for AHK v2
+; Credits:           THX tic for GDIP.AHK, tkoi for ILBUTTON.AHK
+; ======================================================================================================================
+; How to use:
+;     1. Call UseGDIP() to initialize the Gdiplus.dll before the first call of this function.
+;     2. Create a push button (e.g. "MyGui.AddButton("option", "caption").
+;     3. If you want to want to use another color than the GUI's current Backcolor for the background of the images
+;        - especially for rounded buttons - call CreateImageButton("SetDefGuiColor", NewColor) where NewColor is a RGB
+;        integer value (0xRRGGBB) or a HTML color name ("Red"). You can also change the default text color by calling
+;        CreateImageButton("SetDefTxtColor", NewColor).
+;        To reset the colors to the AHK/system default pass "*DEF*" in NewColor, to reset the background to use
+;        Gui.Backcolor pass "*GUI*".
+;     4. To create an image button call CreateImageButton() passing two or more parameters:
+;        GuiBtn      -  Gui.Button object.
+;        Mode        -  The mode used to create the bitmaps:
+;                       0  -  unicolored or bitmap
+;                       1  -  vertical bicolored
+;                       2  -  horizontal bicolored
+;                       3  -  vertical gradient
+;                       4  -  horizontal gradient
+;                       5  -  vertical gradient using StartColor at both borders and TargetColor at the center
+;                       6  -  horizontal gradient using StartColor at both borders and TargetColor at the center
+;                       7  -  'raised' style
+;                       8  -  forward diagonal gradient from the upper-left corner to the lower-right corner
+;                       9  -  backward diagonal gradient from the upper-right corner to the lower-left corner
+;                      -1  -  reset the button
+;        Options*    -  variadic array containing up to 6 option arrays (see below).
+;        ---------------------------------------------------------------------------------------------------------------
+;        The index of each option object determines the corresponding button state on which the bitmap will be shown.
+;        MSDN defines 6 states (http://msdn.microsoft.com/en-us/windows/bb775975):
+;           PBS_NORMAL    = 1
+;	         PBS_HOT       = 2
+;	         PBS_PRESSED   = 3
+;	         PBS_DISABLED  = 4
+;	         PBS_DEFAULTED = 5
+;	         PBS_STYLUSHOT = 6 <- used only on tablet computers (that's false for Windows Vista and 7, see below)
+;        If you don't want the button to be 'animated' on themed GUIs, just pass one option object with index 1.
+;        On Windows Vista and 7 themed bottons are 'animated' using the images of states 5 and 6 after clicked.
+;        ---------------------------------------------------------------------------------------------------------------
+;        Each option array may contain the following values:
+;           Index Value
+;           1     StartColor  mandatory for Option[1], higher indices will inherit the value of Option[1], if omitted:
+;                             -  ARGB integer value (0xAARRGGBB) or HTML color name ("Red").
+;                             -  Path of an image file or HBITMAP handle for mode 0.
+;           2     TargetColor mandatory for Option[1] if Mode > 0. Higher indcices will inherit the color of Option[1],
+;                             if omitted:
+;                             -  ARGB integer value (0xAARRGGBB) or HTML color name ("Red").
+;                             -  String "HICON" if StartColor contains a HICON handle.
+;           3     TextColor   optional, if omitted, the default text color will be used for Option[1], higher indices
+;                             will inherit the color of Option[1]:
+;                             -  ARGB integer value (0xAARRGGBB) or HTML color name ("Red").
+;                                Default: 0xFF000000 (black)
+;           4     Rounded     optional:
+;                             -  Radius of the rounded corners in pixel; the letters 'H' and 'W' may be specified
+;                                also to use the half of the button's height or width respectively.
+;                                Default: 0 - not rounded
+;           5     BorderColor optional, ignored for modes 0 (bitmap) and 7, color of the border:
+;                             -  RGB integer value (0xRRGGBB) or HTML color name ("Red").
+;           6     BorderWidth optional, ignored for modes 0 (bitmap) and 7, width of the border in pixels:
+;                             -  Default: 1
+;        ---------------------------------------------------------------------------------------------------------------
+;        If the the button has a caption it will be drawn upon the bitmaps.
+;     5. Call GdiplusShutDown() to clean up the resources used by GDI+ after the last function call or
+;        before the script terminates.
+; ======================================================================================================================
+; This software is provided 'as-is', without any express or implied warranty.
+; In no event will the authors be held liable for any damages arising from the use of this software.
+; ======================================================================================================================
+; CreateImageButton()
+; ======================================================================================================================
+CreateImageButton(GuiBtn, Mode, Options*) {
+    ; Default colors - COLOR_3DFACE is used by AHK as default Gui background color
+    Static DefGuiColor := SetDefGuiColor("*GUI*"),
+        DefTxtColor := SetDefTxtColor("*DEF*"),
+        GammaCorr := False
+    Static HTML := { BLACK: 0x000000, GRAY: 0x808080, SILVER: 0xC0C0C0, WHITE: 0xFFFFFF,
+        MAROON: 0x800000, PURPLE: 0x800080, FUCHSIA: 0xFF00FF, RED: 0xFF0000,
+        GREEN: 0x008000, OLIVE: 0x808000, YELLOW: 0xFFFF00, LIME: 0x00FF00,
+        NAVY: 0x000080, TEAL: 0x008080, AQUA: 0x00FFFF, BLUE: 0x0000FF }
+    Static MaxBitmaps := 6, MaxOptions := 6
+    Static BitMaps := [], Buttons := Map()
+    Static Bitmap := 0, Graphics := 0, Font := 0, StringFormat := 0, HIML := 0
+    Static BtnCaption := "", BtnStyle := 0
+    Static HWND := 0
+    Bitmap := Graphics := Font := StringFormat := HIML := 0
+    NumBitmaps := 0
+    BtnCaption := ""
+    BtnStyle := 0
+    BtnW := 0
+    BtnH := 0
+    GuiColor := ""
+    TxtColor := ""
+    HWND := 0
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Check for 'special calls'
+    If !IsObject(GuiBtn) {
+        Switch GuiBtn {
+            Case "SetDefGuiColor":
+                DefGuiColor := SetDefGuiColor(Mode)
+                Return True
+            Case "SetDefTxtColor":
+                DefTxtColor := SetDefTxtColor(Mode)
+                Return True
+            Case "SetGammaCorrection":
+                GammaCorr := !!Mode
+                Return True
+        }
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Check the control object
+    If (Type(GuiBtn) != "Gui.Button")
+        Return ErrorExit("Invalid parameter GuiBtn!")
+    HWND := GuiBtn.Hwnd
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Check Mode
+    If !IsInteger(Mode) || (Mode < -1) || (Mode > 9)
+        Return ErrorExit("Invalid parameter Mode!")
+    If (Mode = -1) { ; reset the button
+        If Buttons.Has(HWND) {
+            Btn := Buttons[HWND]
+            BIL := Buffer(20 + A_PtrSize, 0)
+            NumPut("Ptr", -1, BIL) ; BCCL_NOGLYPH
+            SendMessage(0x1602, 0, BIL.Ptr, HWND) ; BCM_SETIMAGELIST
+            IL_Destroy(Btn["HIML"])
+            ControlSetStyle(Btn["Style"], HWND)
+            Buttons.Delete(HWND)
+            Return True
+        }
+        Return False
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Check Options
+    If !(Options Is Array) || !Options.Has(1) || (Options.Length > MaxOptions)
+        Return ErrorExit("Invalid parameter Options!")
+    ; -------------------------------------------------------------------------------------------------------------------
+    HBITMAP := HFORMAT := PBITMAP := PBRUSH := PFONT := PGRAPHICS := PPATH := 0
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Get control's styles
+    BtnStyle := ControlGetStyle(HWND)
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Get the button's font
+    PFONT := 0
+    If (HFONT := SendMessage(0x31, 0, 0, HWND)) { ; WM_GETFONT
+        DC := DllCall("GetDC", "Ptr", HWND, "Ptr")
+        DllCall("SelectObject", "Ptr", DC, "Ptr", HFONT)
+        DllCall("Gdiplus.dll\GdipCreateFontFromDC", "Ptr", DC, "PtrP", &PFONT)
+        DllCall("ReleaseDC", "Ptr", HWND, "Ptr", DC)
+    }
+    If !(Font := PFONT)
+        Return ErrorExit("Couldn't get button's font!")
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Get the button's width and height
+    ControlGetPos(, , &BtnW, &BtnH, HWND)
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Get the button's caption
+    BtnCaption := GuiBtn.Text
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Create a GDI+ bitmap
+    PBITMAP := 0
+    DllCall("Gdiplus.dll\GdipCreateBitmapFromScan0",
+        "Int", BtnW, "Int", BtnH, "Int", 0, "UInt", 0x26200A, "Ptr", 0, "PtrP", &PBITMAP)
+    If !(Bitmap := PBITMAP)
+        Return ErrorExit("Couldn't create the GDI+ bitmap!")
+    ; Get the pointer to its graphics
+    PGRAPHICS := 0
+    DllCall("Gdiplus.dll\GdipGetImageGraphicsContext", "Ptr", PBITMAP, "PtrP", &PGRAPHICS)
+    If !(Graphics := PGRAPHICS)
+        Return ErrorExit("Couldn't get the the GDI+ bitmap's graphics!")
+    ; Quality settings
+    DllCall("Gdiplus.dll\GdipSetSmoothingMode", "Ptr", PGRAPHICS, "UInt", 4)
+    DllCall("Gdiplus.dll\GdipSetInterpolationMode", "Ptr", PGRAPHICS, "Int", 7)
+    DllCall("Gdiplus.dll\GdipSetCompositingQuality", "Ptr", PGRAPHICS, "UInt", 4)
+    DllCall("Gdiplus.dll\GdipSetRenderingOrigin", "Ptr", PGRAPHICS, "Int", 0, "Int", 0)
+    DllCall("Gdiplus.dll\GdipSetPixelOffsetMode", "Ptr", PGRAPHICS, "UInt", 4)
+    DllCall("Gdiplus.dll\GdipSetTextRenderingHint", "Ptr", PGRAPHICS, "Int", 0)
+    ; Create a StringFormat object
+    HFORMAT := 0
+    DllCall("Gdiplus.dll\GdipStringFormatGetGenericTypographic", "PtrP", &HFORMAT)
+    ; Horizontal alignment
+    ; BS_LEFT = 0x0100, BS_RIGHT = 0x0200, BS_CENTER = 0x0300, BS_TOP = 0x0400, BS_BOTTOM = 0x0800, BS_VCENTER = 0x0C00
+    ; SA_LEFT = 0, SA_CENTER = 1, SA_RIGHT = 2
+    HALIGN := (BtnStyle & 0x0300) = 0x0300 ? 1
+        : (BtnStyle & 0x0300) = 0x0200 ? 2
+            : (BtnStyle & 0x0300) = 0x0100 ? 0
+            : 1
+    DllCall("Gdiplus.dll\GdipSetStringFormatAlign", "Ptr", HFORMAT, "Int", HALIGN)
+    ; Vertical alignment
+    VALIGN := (BtnStyle & 0x0C00) = 0x0400 ? 0
+        : (BtnStyle & 0x0C00) = 0x0800 ? 2
+            : 1
+    DllCall("Gdiplus.dll\GdipSetStringFormatLineAlign", "Ptr", HFORMAT, "Int", VALIGN)
+    DllCall("Gdiplus.dll\GdipSetStringFormatHotkeyPrefix", "Ptr", HFORMAT, "UInt", 1) ; THX robodesign
+    StringFormat := HFORMAT
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Create the bitmap(s)
+    BitMaps := []
+    BitMaps.Length := MaxBitmaps
+    Opt1 := Options[1]
+    Opt1.Length := MaxOptions
+    Loop MaxOptions
+        If !Opt1.Has(A_Index)
+            Opt1[A_Index] := ""
+    If (Opt1[3] = "")
+        Opt1[3] := GetARGB(DefTxtColor)
+    For Idx, Opt In Options {
+        If !IsSet(Opt) || !IsObject(Opt) || !(Opt Is Array)
+            Continue
+        BkgColor1 := BkgColor2 := TxtColor := Rounded := GuiColor := Image := ""
+        ; Replace omitted options with the values of Options.1
+        If (Idx > 1) {
+            Opt.Length := MaxOptions
+            Loop MaxOptions {
+                If !Opt.Has(A_Index) || (Opt[A_Index] = "")
+                    Opt[A_Index] := Opt1[A_Index]
+            }
+        }
+        ; ----------------------------------------------------------------------------------------------------------------
+        ; Check option values
+        ; StartColor & TargetColor
+        If (Mode = 0) && BitmapOrIcon(Opt[1], Opt[2])
+            Image := Opt[1]
+        Else {
+            If !IsInteger(Opt[1]) && !HTML.HasOwnProp(Opt[1])
+                Return ErrorExit("Invalid value for StartColor in Options[" . Idx . "]!")
+            BkgColor1 := GetARGB(Opt[1])
+            If (Opt[2] = "")
+                Opt[2] := Opt[1]
+            If !IsInteger(Opt[2]) && !HTML.HasOwnProp(Opt[2])
+                Return ErrorExit("Invalid value for TargetColor in Options[" . Idx . "]!")
+            BkgColor2 := GetARGB(Opt[2])
+        }
+        ; TextColor
+        If (Opt[3] = "")
+            Opt[3] := GetARGB(DefTxtColor)
+        If !IsInteger(Opt[3]) && !HTML.HasOwnProp(Opt[3])
+            Return ErrorExit("Invalid value for TxtColor in Options[" . Idx . "]!")
+        TxtColor := GetARGB(Opt[3])
+        ; Rounded
+        Rounded := Opt[4]
+        If (Rounded = "H")
+            Rounded := BtnH * 0.5
+        If (Rounded = "W")
+            Rounded := BtnW * 0.5
+        If !IsNumber(Rounded)
+            Rounded := 0
+        ; GuiColor
+        If DefGuiColor = "*GUI*"
+            GuiColor := GetARGB(GuiBtn.Gui.Backcolor != "" ? "0x" GuiBtn.Gui.Backcolor : SetDefGuiColor("*DEF*"))
+        Else
+            GuiColor := GetARGB(DefGuiColor)
+        ; BorderColor
+        BorderColor := ""
+        If (Opt[5] != "") {
+            If !IsInteger(Opt[5]) && !HTML.HasOwnProp(Opt[5])
+                Return ErrorExit("Invalid value for BorderColor in Options[" . Idx . "]!")
+            BorderColor := 0xFF000000 | GetARGB(Opt[5]) ; BorderColor must be always opaque
+        }
+        ; BorderWidth
+        BorderWidth := Opt[6] ? Opt[6] : 1
+        ; ----------------------------------------------------------------------------------------------------------------
+        ; Clear the background
+        DllCall("Gdiplus.dll\GdipGraphicsClear", "Ptr", PGRAPHICS, "UInt", GuiColor)
+        ; Create the image
+        If (Image = "") { ; Create a BitMap based on the specified colors
+            PathX := PathY := 0, PathW := BtnW, PathH := BtnH
+            ; Create a GraphicsPath
+            PPATH := 0
+            DllCall("Gdiplus.dll\GdipCreatePath", "UInt", 0, "PtrP", &PPATH)
+            If (Rounded < 1) ; the path is a rectangular rectangle
+                PathAddRectangle(PPATH, PathX, PathY, PathW, PathH)
+            Else ; the path is a rounded rectangle
+                PathAddRoundedRect(PPATH, PathX, PathY, PathW, PathH, Rounded)
+            ; If BorderColor and BorderWidth are specified, 'draw' the border (not for Mode 7)
+            If (BorderColor != "") && (BorderWidth > 0) && (Mode != 7) {
+                ; Create a SolidBrush
+                PBRUSH := 0
+                DllCall("Gdiplus.dll\GdipCreateSolidFill", "UInt", BorderColor, "PtrP", &PBRUSH)
+                ; Fill the path
+                DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+                ; Free the brush
+                DllCall("Gdiplus.dll\GdipDeleteBrush", "Ptr", PBRUSH)
+                ; Reset the path
+                DllCall("Gdiplus.dll\GdipResetPath", "Ptr", PPATH)
+                ; Add a new 'inner' path
+                PathX := PathY := BorderWidth, PathW -= BorderWidth, PathH -= BorderWidth, Rounded -= BorderWidth
+                If (Rounded < 1) ; the path is a rectangular rectangle
+                    PathAddRectangle(PPATH, PathX, PathY, PathW - PathX, PathH - PathY)
+                Else ; the path is a rounded rectangle
+                    PathAddRoundedRect(PPATH, PathX, PathY, PathW, PathH, Rounded)
+                ; If a BorderColor has been drawn, BkgColors must be opaque
+                BkgColor1 := 0xFF000000 | BkgColor1
+                BkgColor2 := 0xFF000000 | BkgColor2
+            }
+            PathW -= PathX
+            PathH -= PathY
+            PBRUSH := 0
+            RECTF := 0
+            Switch Mode {
+                Case 0:                    ; the background is unicolored
+                    ; Create a SolidBrush
+                    DllCall("Gdiplus.dll\GdipCreateSolidFill", "UInt", BkgColor1, "PtrP", &PBRUSH)
+                    ; Fill the path
+                    DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+                Case 1, 2:                 ; the background is bicolored
+                    ; Create a LineGradientBrush
+                    SetRectF(&RECTF, PathX, PathY, PathW, PathH)
+                    DllCall("Gdiplus.dll\GdipCreateLineBrushFromRect",
+                        "Ptr", RECTF, "UInt", BkgColor1, "UInt", BkgColor2, "Int", Mode & 1, "Int", 3, "PtrP", &PBRUSH)
+                    DllCall("Gdiplus.dll\GdipSetLineGammaCorrection", "Ptr", PBRUSH, "Int", GammaCorr)
+                    ; Set up colors and positions
+                    SetRect(&COLORS, BkgColor1, BkgColor1, BkgColor2, BkgColor2) ; sorry for function misuse
+                    SetRectF(&POSITIONS, 0, 0.5, 0.5, 1) ; sorry for function misuse
+                    DllCall("Gdiplus.dll\GdipSetLinePresetBlend",
+                        "Ptr", PBRUSH, "Ptr", COLORS, "Ptr", POSITIONS, "Int", 4)
+                    ; Fill the path
+                    DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+                Case 3, 4, 5, 6, 8, 9:     ; the background is a gradient
+                    ; Determine the brush's width/height
+                    W := Mode = 6 ? PathW / 2 : PathW  ; horizontal
+                    H := Mode = 5 ? PathH / 2 : PathH  ; vertical
+                    ; Create a LineGradientBrush
+                    SetRectF(&RECTF, PathX, PathY, W, H)
+                    LGM := Mode > 6 ? Mode - 6 : Mode & 1 ; LinearGradientMode
+                    DllCall("Gdiplus.dll\GdipCreateLineBrushFromRect",
+                        "Ptr", RECTF, "UInt", BkgColor1, "UInt", BkgColor2, "Int", LGM, "Int", 3, "PtrP", &PBRUSH)
+                    DllCall("Gdiplus.dll\GdipSetLineGammaCorrection", "Ptr", PBRUSH, "Int", GammaCorr)
+                    ; Fill the path
+                    DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+                Case 7:                    ; raised mode
+                    DllCall("Gdiplus.dll\GdipCreatePathGradientFromPath", "Ptr", PPATH, "PtrP", &PBRUSH)
+                    ; Set Gamma Correction
+                    DllCall("Gdiplus.dll\GdipSetPathGradientGammaCorrection", "Ptr", PBRUSH, "UInt", GammaCorr)
+                    ; Set surround and center colors
+                    ColorArray := Buffer(4, 0)
+                    NumPut("UInt", BkgColor1, ColorArray)
+                    DllCall("Gdiplus.dll\GdipSetPathGradientSurroundColorsWithCount",
+                        "Ptr", PBRUSH, "Ptr", ColorArray, "IntP", 1)
+                    DllCall("Gdiplus.dll\GdipSetPathGradientCenterColor", "Ptr", PBRUSH, "UInt", BkgColor2)
+                    ; Set the FocusScales
+                    FS := (BtnH < BtnW ? BtnH : BtnW) / 3
+                    XScale := (BtnW - FS) / BtnW
+                    YScale := (BtnH - FS) / BtnH
+                    DllCall("Gdiplus.dll\GdipSetPathGradientFocusScales", "Ptr", PBRUSH, "Float", XScale, "Float", YScale)
+                    ; Fill the path
+                    DllCall("Gdiplus.dll\GdipFillPath", "Ptr", PGRAPHICS, "Ptr", PBRUSH, "Ptr", PPATH)
+            }
+            ; Free resources
+            DllCall("Gdiplus.dll\GdipDeleteBrush", "Ptr", PBRUSH)
+            DllCall("Gdiplus.dll\GdipDeletePath", "Ptr", PPATH)
+        }
+        Else { ; Create a bitmap from HBITMAP or file
+            PBM := 0
+            If IsInteger(Image)
+                If (Opt[2] = "HICON")
+                    DllCall("Gdiplus.dll\GdipCreateBitmapFromHICON", "Ptr", Image, "PtrP", &PBM)
+                Else
+                    DllCall("Gdiplus.dll\GdipCreateBitmapFromHBITMAP", "Ptr", Image, "Ptr", 0, "PtrP", &PBM)
+            Else
+                DllCall("Gdiplus.dll\GdipCreateBitmapFromFile", "WStr", Image, "PtrP", &PBM)
+            ; Draw the bitmap
+            DllCall("Gdiplus.dll\GdipDrawImageRectI",
+                "Ptr", PGRAPHICS, "Ptr", PBM, "Int", 0, "Int", 0, "Int", BtnW, "Int", BtnH)
+            ; Free the bitmap
+            DllCall("Gdiplus.dll\GdipDisposeImage", "Ptr", PBM)
+        }
+        ; ----------------------------------------------------------------------------------------------------------------
+        ; Draw the caption
+        If (BtnCaption != "") {
+            ; Text color
+            DllCall("Gdiplus.dll\GdipCreateSolidFill", "UInt", TxtColor, "PtrP", &PBRUSH)
+            ; Set the text's rectangle
+            RECT := Buffer(16, 0)
+            NumPut("Float", BtnW, "Float", BtnH, RECT, 8)
+            ; Draw the text
+            DllCall("Gdiplus.dll\GdipDrawString",
+                "Ptr", PGRAPHICS, "Str", BtnCaption, "Int", -1,
+                "Ptr", PFONT, "Ptr", RECT, "Ptr", HFORMAT, "Ptr", PBRUSH)
+        }
+        ; ----------------------------------------------------------------------------------------------------------------
+        ; Create a HBITMAP handle from the bitmap and add it to the array
+        HBITMAP := 0
+        DllCall("Gdiplus.dll\GdipCreateHBITMAPFromBitmap", "Ptr", PBITMAP, "PtrP", &HBITMAP, "UInt", 0X00FFFFFF)
+        BitMaps[Idx] := HBITMAP
+        NumBitmaps++
+        ; Free resources
+        DllCall("Gdiplus.dll\GdipDeleteBrush", "Ptr", PBRUSH)
+    }
+    ; Now free remaining the GDI+ objects
+    DllCall("Gdiplus.dll\GdipDisposeImage", "Ptr", PBITMAP)
+    DllCall("Gdiplus.dll\GdipDeleteGraphics", "Ptr", PGRAPHICS)
+    DllCall("Gdiplus.dll\GdipDeleteFont", "Ptr", PFONT)
+    DllCall("Gdiplus.dll\GdipDeleteStringFormat", "Ptr", HFORMAT)
+    Bitmap := Graphics := Font := StringFormat := 0
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; Create the ImageList
+    ; ILC_COLOR32 = 0x20
+    HIL := DllCall("Comctl32.dll\ImageList_Create"
+        , "UInt", BtnW, "UInt", BtnH, "UInt", 0x20, "Int", 6, "Int", 0, "Ptr") ; ILC_COLOR32
+    Loop (NumBitmaps > 1) ? MaxBitmaps : 1 {
+        HBITMAP := BitMaps.Has(A_Index) ? BitMaps[A_Index] : BitMaps[1]
+        DllCall("Comctl32.dll\ImageList_Add", "Ptr", HIL, "Ptr", HBITMAP, "Ptr", 0)
+    }
+    ; Create a BUTTON_IMAGELIST structure
+    BIL := Buffer(20 + A_PtrSize, 0)
+    ; Get the currently assigned image list
+    SendMessage(0x1603, 0, BIL.Ptr, HWND) ; BCM_GETIMAGELIST
+    PrevIL := NumGet(BIL, "UPtr")
+    ; Remove the previous image list, if any
+    BIL := Buffer(20 + A_PtrSize, 0)
+    NumPut("Ptr", -1, BIL) ; BCCL_NOGLYPH
+    SendMessage(0x1602, 0, BIL.Ptr, HWND) ; BCM_SETIMAGELIST
+    ; Create a new BUTTON_IMAGELIST structure
+    ; BUTTON_IMAGELIST_ALIGN_LEFT = 0, BUTTON_IMAGELIST_ALIGN_RIGHT = 1, BUTTON_IMAGELIST_ALIGN_CENTER = 4,
+    BIL := Buffer(20 + A_PtrSize, 0)
+    NumPut("Ptr", HIL, BIL)
+    Numput("UInt", 4, BIL, A_PtrSize + 16) ; BUTTON_IMAGELIST_ALIGN_CENTER
+    ControlSetStyle(BtnStyle | 0x0080, HWND) ; BS_BITMAP
+    ; Remove the currently assigned image list, if any
+    If (PrevIL)
+        IL_Destroy(PrevIL)
+    ; Assign the ImageList to the button
+    SendMessage(0x1602, 0, BIL.Ptr, HWND) ; BCM_SETIMAGELIST
+    ; Free the bitmaps
+    FreeBitmaps()
+    NumBitmaps := 0
+    ; -------------------------------------------------------------------------------------------------------------------
+    ; All done successfully
+    Buttons[HWND] := Map("HIML", HIL, "Style", BtnStyle)
+    Return True
+    ; ===================================================================================================================
+    ; Internally used functions
+    ; ===================================================================================================================
+    ; Set the default GUI color.
+    ; GuiColor - RGB integer value (0xRRGGBB) or HTML color name ("Red").
+    ;          - "*GUI*" to use Gui.Backcolor (default)
+    ;          - "*DEF*" to use AHK's default Gui color.
+    SetDefGuiColor(GuiColor) {
+        Static DefColor := DllCall("GetSysColor", "Int", 15, "UInt") ; COLOR_3DFACE
+        Switch
+        {
+            Case (GuiColor = "*GUI*"):
+                Return GuiColor
+            Case (GuiColor = "*DEF*"):
+                Return GetRGB(DefColor)
+            Case IsInteger(GuiColor):
+                Return GuiColor & 0xFFFFFF
+            Case HTML.HasOwnProp(GuiColor):
+                Return HTML.%GuiColor% &0xFFFFFF
+            Default:
+                Throw ValueError("Parameter GuiColor invalid", -1, GuiColor)
+        }
+    }
+    ; ===================================================================================================================
+    ; Set the default text color.
+    ; TxtColor - RGB integer value (0xRRGGBB) or HTML color name ("Red").
+    ;          - "*DEF*" to reset to AHK's default text color.
+    SetDefTxtColor(TxtColor) {
+        Static DefColor := DllCall("GetSysColor", "Int", 18, "UInt") ; COLOR_BTNTEXT
+        Switch
+        {
+            Case (TxtColor = "*DEF*"):
+                Return GetRGB(DefColor)
+            Case IsInteger(TxtColor):
+                Return TxtColor & 0xFFFFFF
+            Case HTML.HasOwnProp(TxtColor):
+                Return HTML.%TxtColor% &0xFFFFFF
+            Default:
+                Throw ValueError("Parameter TxtColor invalid", -1, TxtColor)
+        }
+        Return True
+    }
+    ; ===================================================================================================================
+    ; PRIVATE FUNCTIONS =================================================================================================
+    ; ===================================================================================================================
+    BitmapOrIcon(O1, O2) {
+        ; OBJ_BITMAP = 7
+        Return IsInteger(O1) ? (O2 = "HICON") || (DllCall("GetObjectType", "Ptr", O1, "UInt") = 7) : FileExist(O1)
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    FreeBitmaps() {
+        For HBITMAP In BitMaps
+            IsSet(HBITMAP) ? DllCall("DeleteObject", "Ptr", HBITMAP) : 0
+        BitMaps := []
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    GetARGB(RGB) {
+        ARGB := HTML.HasOwnProp(RGB) ? HTML.%RGB% : RGB
+        Return (ARGB & 0xFF000000) = 0 ? 0xFF000000 | ARGB : ARGB
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    GetRGB(BGR) {
+        Return ((BGR & 0xFF0000) >> 16) | (BGR & 0x00FF00) | ((BGR & 0x0000FF) << 16)
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    PathAddRectangle(Path, X, Y, W, H) {
+        Return DllCall("Gdiplus.dll\GdipAddPathRectangle", "Ptr", Path, "Float", X, "Float", Y, "Float", W, "Float", H)
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    PathAddRoundedRect(Path, X1, Y1, X2, Y2, R) {
+        D := (R * 2), X2 -= D, Y2 -= D
+        DllCall("Gdiplus.dll\GdipAddPathArc",
+            "Ptr", Path, "Float", X1, "Float", Y1, "Float", D, "Float", D, "Float", 180, "Float", 90)
+        DllCall("Gdiplus.dll\GdipAddPathArc",
+            "Ptr", Path, "Float", X2, "Float", Y1, "Float", D, "Float", D, "Float", 270, "Float", 90)
+        DllCall("Gdiplus.dll\GdipAddPathArc",
+            "Ptr", Path, "Float", X2, "Float", Y2, "Float", D, "Float", D, "Float", 0, "Float", 90)
+        DllCall("Gdiplus.dll\GdipAddPathArc",
+            "Ptr", Path, "Float", X1, "Float", Y2, "Float", D, "Float", D, "Float", 90, "Float", 90)
+        Return DllCall("Gdiplus.dll\GdipClosePathFigure", "Ptr", Path)
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    SetRect(&Rect, L := 0, T := 0, R := 0, B := 0) {
+        Rect := Buffer(16, 0)
+        NumPut("Int", L, "Int", T, "Int", R, "Int", B, Rect)
+        Return True
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    SetRectF(&Rect, X := 0, Y := 0, W := 0, H := 0) {
+        Rect := Buffer(16, 0)
+        NumPut("Float", X, "Float", Y, "Float", W, "Float", H, Rect)
+        Return True
+    }
+    ; -------------------------------------------------------------------------------------------------------------------
+    ErrorExit(ErrMsg) {
+        If (Bitmap)
+            DllCall("Gdiplus.dll\GdipDisposeImage", "Ptr", Bitmap)
+        If (Graphics)
+            DllCall("Gdiplus.dll\GdipDeleteGraphics", "Ptr", Graphics)
+        If (Font)
+            DllCall("Gdiplus.dll\GdipDeleteFont", "Ptr", Font)
+        If (StringFormat)
+            DllCall("Gdiplus.dll\GdipDeleteStringFormat", "Ptr", StringFormat)
+        If (HIML) {
+            BIL := Buffer(20 + A_PtrSize, 0)
+            NumPut("Ptr", -1, BIL) ; BCCL_NOGLYPH
+            DllCall("SendMessage", "Ptr", HWND, "UInt", 0x1602, "Ptr", 0, "Ptr", BIL) ; BCM_SETIMAGELIST
+            IL_Destroy(HIML)
+        }
+        Bitmap := 0
+        Graphics := 0
+        Font := 0
+        StringFormat := 0
+        HIML := 0
+        FreeBitmaps()
+        Throw Error(ErrMsg)
+    }
+}
+; ----------------------------------------------------------------------------------------------------------------------
+; Loads and initializes the Gdiplus.dll.
+; Must be called once before you use any of the DLL functions.
+; ----------------------------------------------------------------------------------------------------------------------
+#DllLoad "Gdiplus.dll"
+UseGDIP() {
+    Static GdipObject := 0
+    If !IsObject(GdipObject) {
+        GdipToken := 0
+        SI := Buffer(24, 0) ; size of 64-bit structure
+        NumPut("UInt", 1, SI)
+        If DllCall("Gdiplus.dll\GdiplusStartup", "PtrP", &GdipToken, "Ptr", SI, "Ptr", 0, "UInt") {
+            MsgBox("GDI+ could not be startet!`n`nThe program will exit!", A_ThisFunc, 262160)
+            ExitApp
+        }
+        GdipObject := { __Delete: UseGdipShutDown }
+    }
+    UseGdipShutDown(*) {
+        DllCall("Gdiplus.dll\GdiplusShutdown", "Ptr", GdipToken)
+    }
+}
