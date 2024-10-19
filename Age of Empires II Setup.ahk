@@ -1,9 +1,26 @@
 #Requires AutoHotkey v2
 #SingleInstance Force
 
-AOE_II 	:= 'https://media.githubusercontent.com/media/Chandoul/aoeii_easy_manager/refs/heads/main/data/Age%20of%20Empires%20II.7z?download=true'
-APP 	:= 'https://github.com/SmileAoE/aoeii_aio/raw/refs/heads/main/DB/7za.exe'
-EXE 	:= 'app\7za.exe'
+APP := 'https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/refs/heads/main/data/Base.7z'
+EXE := '7zr.exe'
+If !DirExist('app') {
+	Try {
+		Download(APP, 'Base.7z')
+		Download('https://www.7-zip.org/a/7zr.exe', EXE)
+		buf := FileRead('7zr.exe', "RAW")
+		If StrGet(buf, 2, "cp0") !== "MZ" {
+			Msgbox("7zr doesn't seem to be a valid excutable!",, 0x30)
+			buf := ''
+			ExitApp
+		}
+		buf := ''
+		RunWait(EXE ' x Base.7z -aoa',, 'Hide')
+	} Catch As Err {
+		Msgbox(Err.What,, 0x30)
+		ExitApp
+	}
+}
+AOE_II := 'https://media.githubusercontent.com/media/Chandoul/aoeii_easy_manager/refs/heads/main/data/Age%20of%20Empires%20II.7z?download=true'
 Game := Gui(, 'Age of Empires II Setup')
 Game.OnEvent('Close', (*) => Quit())
 Quit() {
