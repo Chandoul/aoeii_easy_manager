@@ -13,7 +13,7 @@ If !DirExist('app') {
 			ExitApp
 		}
 		buf := ''
-		RET := RunWait(EXE ' x Base.7z -aoa',, 'Hide')
+		RunWaitA([EXE ' x Base.7z -aoa',, 'Hide'])
 	} Catch As Err {
 		Msgbox(Err.What, 'Error occured', 0x30)
 		ExitApp
@@ -234,6 +234,9 @@ DownloadA(Link, File) {
 	}
 	PB.Value := Size
 	SetTimer(WatchDownload, 0)
+}
+RunWaitA(Command) {
+    Code := RunWait(Command*)
 }
 ListHashs(Dir, HashType := 2) {
 	Hashs := 'Map('
