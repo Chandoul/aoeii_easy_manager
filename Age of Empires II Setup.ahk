@@ -30,12 +30,12 @@ Quit() {
 }
 Game.MarginX := 10
 Game.MarginY := 10
-Game.AddTab3('w800 h600', ['Game', 'Patchs/Versions'])
+Tab := Game.AddTab3('w800 h600', ['Game', 'Patchs/Versions'])
 Gameoff := Game.AddPicture('xm+218 ym+50', 'app\gameoff.png')
 Game.SetFont('s10', 'Segoe UI')
 GameLocation := Game.AddComboBox('w363 Center ReadOnly cBlue')
-GameLocation.OnEvent('Change', (*) => SelectGame(GameLocation.Text))
-AllGameLocation := LoadGameLocation()
+GameLocation.OnEvent('Change', (*) => (SelectGame(GameLocation.Text)
+                                        , MsgBox('"' GameLocation.Text '" ')))
 LoadGameLocation() {
 	L := Map()
 	If FileExist('GameLocation') {
@@ -49,6 +49,9 @@ LoadGameLocation() {
 					GameLocation.Choose(Location)
 					L[Location] := 1
 					Gameoff.Value := 'app\game.png'
+                    PAoK.Value := 'app\aok.png'
+                    PAoC.Value := 'app\aoc.png'
+                    PFE.Value := 'app\Fe.png'
 				}
 			}
 		}
@@ -77,7 +80,7 @@ CreateGame() {
 		DownloadA(AOE_II, 'data\Age of Empires II.7z')
 	PB.Value += 1
 	PBT.Text := 'Decompressing "Age of Empires II.7z"...'
-	RunWait(EXE ' x "data\Age of Empires II.7z" -o"' Location '" -aoa',, 'Hide')
+	RunWaitA([EXE ' x "data\Age of Empires II.7z" -o"' Location '" -aoa',, 'Hide'])
 	PBT.Text := 'Game creation completed!'
 	PB.Value += 1
 	MsgBox('Game creation completed!', 'Info', 0x40)
@@ -90,9 +93,8 @@ SelectGameBtn := Game.AddButton('w363', 'Select/Choose')
 SelectGameBtn.OnEvent('Click', (*) => SelectGame())
 CreateImageButton(SelectGameBtn, 0, [['0xFFFFFFFF',,, 3, '0xFFB2B2B2'], ['0xFFE6E6E6'], ['0xFFCCCCCC']]*)
 SelectGame(Location := '') {
-	Gameoff.Value := 'app\gameoff.png'
 	If !Location {
-		If !Location := FileSelect('D', 'C:\', 'Select the game folder to repair') {
+		If !Location := FileSelect('D', 'C:\', 'Select the Age of Empires II game folder') {
 			Return
 		}
 	}
@@ -186,7 +188,12 @@ RepairGame := Game.AddButton('w363 Disabled', 'Repair')
 ;}
 PB := Game.AddProgress('w363 -Smooth Range1-13')
 PBT := Game.AddEdit('w363 Center -E0x200 ReadOnly', '---')
+Tab.UseTab(2)
+PAoK := Game.AddPicture('xm+127 ym+50', 'app\aokoff.png')
+PAoC := Game.AddPicture('xm+363 ym+50', 'app\aocoff.png')
+PFE := Game.AddPicture('xm+595 ym+50', 'app\feoff.png')
 Game.Show()
+AllGameLocation := LoadGameLocation()
 IsValidSelection(&Location) {
 	If InStr(Location, '>') {
 		Location := SubStr(Location, 2)
@@ -236,7 +243,16 @@ DownloadA(Link, File) {
 	SetTimer(WatchDownload, 0)
 }
 RunWaitA(Command) {
+    Error := {0	: 'No error'
+            , 1	: 'Warning (Non fatal error(s)). For example, one or more files were locked by some other application, so they were not compressed'
+            , 2	: 'Fatal error'
+            , 7	: 'Command line error'
+            , 8	: 'Not enough memory for operation'
+            , 255 : 'User stopped the process'}
     Code := RunWait(Command*)
+    If Code {
+        MsgBox(Error.%Code%, '7z Error', 0x10)
+    }
 }
 ListHashs(Dir, HashType := 2) {
 	Hashs := 'Map('
@@ -247,7 +263,6 @@ ListHashs(Dir, HashType := 2) {
 	Hashs .= ')'
 	Return Hashs
 }
-
 ; HashFile by Deo
 ; https://autohotkey.com/board/topic/66139-ahk-l-calculating-md5sha-checksum-from-file/
 ; Modified for AutoHotkey v2 by lexikos.
