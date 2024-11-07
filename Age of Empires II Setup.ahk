@@ -13,7 +13,7 @@ If !DirExist('app') {
 			ExitApp
 		}
 		buf := ''
-		RunWait(EXE ' x Base.7z -aoa',, 'Hide')
+		RET := RunWait(EXE ' x Base.7z -aoa',, 'Hide')
 	} Catch As Err {
 		Msgbox(Err.What, 'Error occured', 0x30)
 		ExitApp
