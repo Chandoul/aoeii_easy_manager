@@ -35,7 +35,7 @@ Gameoff := Game.AddPicture('xm+218 ym+50', 'app\gameoff.png')
 Game.SetFont('s10', 'Segoe UI')
 GameLocation := Game.AddComboBox('w363 Center ReadOnly cBlue')
 GameLocation.OnEvent('Change', (*) => (SelectGame(GameLocation.Text)
-                                        , MsgBox('"' GameLocation.Text '" ')))
+                                     , MsgBox('"' GameLocation.Text '" ')))
 LoadGameLocation() {
 	L := Map()
 	If FileExist('GameLocation') {
