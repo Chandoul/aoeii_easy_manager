@@ -214,10 +214,11 @@ DownloadGame(Ctrl, Info) {
             PBT.Visible := True
             For Each, Package in GamePackages {
                 ; Set the needed parameters
-                PackagePath := StrReplace(Package, '/', '\')
+                PackageName := StrReplace(Package, ':')
+                PackagePath := StrReplace(PackageName, '/', '\')
                 PackageFolder := StrSplit(PackagePath, '.')[1]
                 PBT.Value := 'Downloading ' Package
-                DownloadPackage(Package, PackagePath, PackageFolder)
+                DownloadPackage(InStr(Package, '::') ? DownloadDB2 : DownloadDB1, Package, PackagePath, PackageFolder)
                 PB.Value += 1
             }
             ; AOK extract

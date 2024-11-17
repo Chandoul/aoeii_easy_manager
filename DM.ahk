@@ -146,7 +146,7 @@ UpdateDM(Ctrl, Info) {
         }
         If Apply {
             If ConnectedToInternet() {
-                ; Tries to download the mod if doesn't exist or it is outdated
+                ; Tries to download the mod if doesn't exist or outdated
                 NamePart := IniRead('DB\000\DM\DataMod.ini', 'DataMod', DMName, '')
                 If !NamePart {
                     Return
@@ -162,7 +162,7 @@ UpdateDM(Ctrl, Info) {
                     && HashFile('DB\' NamePart[1] '.7z.' Part) != PackagesHashs['DB\' NamePart[1] '.7z.' Part] {
                         FileDelete('DB\' NamePart[1] '.7z.' Part)
                     }
-                    DownloadPackage('DB/' NamePart[1] '.7z.' Part, 'DB\' NamePart[1] '.7z.' Part, 'DB\' NamePart[1])
+                    DownloadPackage((NamePart[3] = 1 ? DownloadDB1 : DownloadDB2), 'DB/' NamePart[1] '.7z.' Part, 'DB\' NamePart[1] '.7z.' Part, 'DB\' NamePart[1])
                 }
             }
             Update(Ctrl, 50)

@@ -5,20 +5,6 @@ If !A_IsAdmin {
     MsgBox('Installer must run as administrator!', 'Warning', 0x30)
     ExitApp
 }
-Scripts := ['AHK.ahk'
-          , 'AoE II Manager AIO.ahk'
-          , 'DDF.ahk'
-          , 'DM.ahk'
-          , 'Fixes.ahk'
-          , 'Game.ahk'
-          , 'Installer.ahk'
-          , 'Language.ahk'
-          , 'SharedLib.ahk'
-          , 'Uninstaller.ahk'
-          , 'UninstallGame.ahk'
-          , 'Version.ahk'
-          , 'VM.ahk'
-          , 'VPN.ahk']
 InstallRegKey := "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\AoE II AIO"
 Installer := Gui('-MinimizeBox', 'Setup')
 Installer.OnEvent('Close', (*) => ExitApp())
@@ -29,33 +15,31 @@ Try {
 Installer.SetFont('Bold s11', 'Calibri')
 Installer.AddText('ym+7 cGreen', 'Age of Empires II Easy Manager Installer')
 InstallBtn := Installer.AddButton('xm+100 w100', 'Install')
-InstallBtn.OnEvent('Click', (*) => Install())
+InstallBtn.OnEvent('Click', Install)
 InstallPrg := Installer.AddProgress('xm -Smooth w300 h17')
 Installer.Show()
-If A_Args.Length = 1 && A_Args[1] = '-Update' {
-
-}
-Install() {
+Install(Ctrl, Info) {
     Try {
         InstallBtn.Text := 'Installing...'
         InstallBtn.Enabled := False
-        InstallPrg.Value := 0
-        InstallPrg.Opt('Range1-' Scripts.Length)
         AppDir := A_ProgramFiles '\AoE II AIO'
         If !DirExist(AppDir) {
             DirCreate(AppDir)
         }
-        For Script in Scripts {
-            Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/' Script, AppDir '\' Script)
-            ++InstallPrg.Value
-        }
-        FileCreateShortcut(AppDir '\AoE II Manager AIO.ahk', A_Desktop '\AoE II Manager AIO.lnk', AppDir)
+        InstallPrg.Value := 10
+        Download('https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/AoE II Manager AIO Ex.ahk', AppDir '\AoE II Manager AIO Ex.ahk')
+        FileCreateShortcut(AppDir '\AoE II Manager AIO Ex.ahk', A_Desktop '\AoE II Manager AIO.lnk', AppDir)
+        InstallPrg.Value := 50
+        Download('https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/SharedLib.ahk', AppDir '\SharedLib.ahk')
+        InstallPrg.Value := 80
+        Download('https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/Uninstaller.ahk', AppDir '\Uninstaller.ahk')
+        InstallPrg.Value := 90
         UpdateGameReg(AppDir)
-        ++InstallPrg.Value
+        InstallPrg.Value := 100
         Sleep(1000)
         InstallBtn.Text := 'Installed'
         If 'Yes' = MsgBox('Installation complete!`n`nWant to launch the app now?', 'Setup', 0x40 + 0x4) {
-            Run(AppDir '\AoE II Manager AIO.ahk', AppDir)
+            Run(AppDir '\AoE II Manager AIO Ex.ahk', AppDir)
         }
         ExitApp()
     } Catch Error As Err {

@@ -12,11 +12,12 @@ Features := Map()
 Config := 'Config.ini'
 GRSetting := A_AppData '\GameRanger\GameRanger Prefs\Settings'
 GRApp := A_AppData '\GameRanger\GameRanger\GameRanger.exe'
-DownloadDB := 'https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main'
-LinkHashs := DownloadDB '/Hashsums.ini'
-BasePackages := ['DB/000.7z.001', 'DB/001.7z.001', 'DB/002.7z.001', 'DB/006.7z.001', 'DB/007.7z.001', 'DB/007.7z.002', 'Shortcuts.7z.001', 'Scripts.7z.001']
-GamePackages := ['DB/003.7z.001', 'DB/003.7z.002', 'DB/003.7z.003', 'DB/003.7z.004', 'DB/004.7z.001', 'DB/004.7z.002', 'DB/004.7z.003', 'DB/005.7z.001']
-RestPackages := ['DB/009.7z.001', 'DB/009.7z.002', 'DB/010.7z.001', 'DB/010.7z.002', 'DB/010.7z.003', 'DB/010.7z.004', 'DB/010.7z.005', 'DB/011.7z.001', 'DB/012.7z.001', 'DB/013.7z.001', 'DB/014.7z.001', 'DB/014.7z.002']
+DownloadDB1 := 'https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main'
+DownloadDB2 := 'https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main'
+LinkHashs := DownloadDB2 '/Hashsums.ini'
+BasePackages := ['::DB/000.7z.001', '::DB/001.7z.001', ':DB/002.7z.001', ':DB/006.7z.001', ':DB/007.7z.001', ':DB/007.7z.002', '::Scripts.7z.001']
+GamePackages := [':DB/003.7z.001', ':DB/003.7z.002', ':DB/003.7z.003', ':DB/003.7z.004', ':DB/004.7z.001', ':DB/004.7z.002', ':DB/004.7z.003', ':DB/005.7z.001']
+RestPackages := [':DB/009.7z.001', ':DB/009.7z.002', ':DB/010.7z.001', ':DB/010.7z.002', ':DB/010.7z.003', ':DB/010.7z.004', ':DB/010.7z.005', ':DB/011.7z.001', ':DB/012.7z.001', ':DB/013.7z.001', ':DB/014.7z.001', ':DB/014.7z.002']
 AllPackagesC := [BasePackages, GamePackages, RestPackages]
 IBRed := [[0xFFFFFF,, 0xFF0000, 4, 0xFF0000, 2], [0xFF0000,, 0xFFFFFF], [0xFF0000,, 0xFFFF00], [0xFFFFFF,, 0xCCCCCC,, 0xCCCCCC]]
 IBBlue := [[0xFFFFFF,, 0x0000FF, 4, 0x0000FF, 2], [0x0000FF,, 0xFFFFFF], [0x0000FF,, 0xFFFF00], [0xFFFFFF,, 0xCCCCCC,, 0xCCCCCC]]
@@ -49,16 +50,17 @@ Try {
         DirCreate('DB')
     }
     If !FileExist('DB\7za.exe') {
-        Download(DownloadDB '/DB/7za.exe', 'DB\7za.exe')
+        Download(DownloadDB1 '/DB/7za.exe', 'DB\7za.exe')
     }
     For Package in BasePackages {
         ProgressBar.Value += 1
-        ProgressText.Text := 'Preparing [ ' Package ' ]'
-        PackagePath := StrReplace(Package, '/', '\')
+        PackageName := StrReplace(Package, ':')
+        ProgressText.Text := 'Preparing [ ' PackageName ' ]'
+        PackagePath := StrReplace(PackageName, '/', '\')
         SplitPath(PackagePath, &OutFileName, &OutDir)
         PackageFolder := (OutDir ? OutDir '\' : '') StrSplit(OutFileName, '.')[1]
         If !FileExist(PackagePath) {
-            DownloadPackage(Package, PackagePath, PackageFolder)
+            DownloadPackage(InStr(Package, '::') ? DownloadDB2 : DownloadDB1, Package, PackagePath, PackageFolder)
         }
         PackHead := StrGet(FileRead(PackagePath, 'RAW m2'), 2, 'CP0')
         If (PackHead = '7z') && !DirExist(PackageFolder) {
@@ -124,7 +126,7 @@ UpdatedPackagesHashs() {
     Return Hashs
 }
 ; Downloads a given package
-DownloadPackage(Package, PackagePath, PackageFolder) {
+DownloadPackage(DownloadDB, Package, PackagePath, PackageFolder) {
     If !FileExist(PackagePath) {
         Download(DownloadDB '/' Package, PackagePath)
         If PackageFolder != '' && DirExist(PackageFolder) {
