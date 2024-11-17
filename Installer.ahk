@@ -27,12 +27,12 @@ Install(Ctrl, Info) {
             DirCreate(AppDir)
         }
         InstallPrg.Value := 10
-        Download('https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/AoE II Manager AIO Ex.ahk', AppDir '\AoE II Manager AIO Ex.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/AoE II Manager AIO Ex.ahk', AppDir '\AoE II Manager AIO Ex.ahk')
         FileCreateShortcut(AppDir '\AoE II Manager AIO Ex.ahk', A_Desktop '\AoE II Manager AIO.lnk', AppDir)
         InstallPrg.Value := 50
-        Download('https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/SharedLib.ahk', AppDir '\SharedLib.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/SharedLib.ahk', AppDir '\SharedLib.ahk')
         InstallPrg.Value := 80
-        Download('https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/Uninstaller.ahk', AppDir '\Uninstaller.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Uninstaller.ahk', AppDir '\Uninstaller.ahk')
         InstallPrg.Value := 90
         UpdateGameReg(AppDir)
         InstallPrg.Value := 100
