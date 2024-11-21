@@ -1,8 +1,17 @@
-#Include SharedLib.ahk
-InstallRegKey := "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Age of Empires II AIO"
-A_Args.Push(IniRead(Config, 'PIDs', '_Parent_', ''))
-AoEIIAIO.Title := 'GAME LOCATION'
-AoEIIAIO.SetFont('Bold')
+#Requires AutoHotkey v2
+#SingleInstance Force
+#Include <InitGame>
+#Include <ImageButton>
+#Include <ValidGame>
+#Include <GetConnectedState>
+#Include <DownloadPackage>
+#Include <ExtractPackage>
+#Include <FolderGetSize>
+AoEIIAIO := Gui(, 'GAME LOCATION')
+AoEIIAIO.BackColor := 'White'
+AoEIIAIO.OnEvent('Close', (*) => ExitApp())
+AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
+AoEIIAIO.SetFont('s10 Bold', 'Calibri')
 Select := AoEIIAIO.AddButton('xm w200 h27', 'Select')
 Select.OnEvent('Click', SelectDirectory)
 CreateImageButton(Select, 0, [['DB\000\pick_folder_normal.png'], ['DB\000\pick_folder_hover.png'], ['DB\000\pick_folder_click.png'], ['DB\000\pick_folder_disable.png',, 0xCCCCCC]]*)
@@ -27,6 +36,7 @@ DeskShort.OnEvent('Click', GameShortcuts)
 PBT := AoEIIAIO.AddText('Center w410 Hidden cBlue')
 PB := AoEIIAIO.AddProgress('-Smooth wp Hidden')
 AoEIIAIO.Show()
+
 ; Load settings
 FGameDirectory := IniRead(Config, 'Settings', 'GameDirectory', '')
 If !ValidGameDirectory(FGameDirectory) {
@@ -212,26 +222,24 @@ DownloadGame(Ctrl, Info) {
             PB.Opt('Range0-' GamePackages.Length + 3)
             PB.Visible := True
             PBT.Visible := True
-            For Each, Package in GamePackages {
-                ; Set the needed parameters
-                PackageName := StrReplace(Package, ':')
-                PackagePath := StrReplace(PackageName, '/', '\')
-                PackageFolder := StrSplit(PackagePath, '.')[1]
-                PBT.Value := 'Downloading ' Package
-                DownloadPackage(InStr(Package, '::') ? DownloadDB2 : DownloadDB1, Package, PackagePath, PackageFolder)
+            For Package in GamePackages {
+                File := StrReplace(Package, 'https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/', '')
+                File := StrReplace(File, '/', '\')
+                PBT.Value := 'Downloading ' File
+                DownloadPackage(Package, File)
                 PB.Value += 1
             }
             ; AOK extract
             PBT.Value := 'Exporting The Age of Kings'
-            ExtractPackage('DB\003.7z.001', SGameDirectory, 1)
+            ExtractPackage('DB\003.7z.001', SGameDirectory)
             PB.Value += 1
             ; AOC extract
             PBT.Value := 'Exporting The Conquerors'
-            ExtractPackage('DB\004.7z.001', SGameDirectory, 1)
+            ExtractPackage('DB\004.7z.001', SGameDirectory)
             PB.Value += 1
             ; FE extract
             PBT.Value := 'Exporting Forgotten Empires'
-            ExtractPackage('DB\005.7z.001', SGameDirectory, 1)
+            ExtractPackage('DB\005.7z.001', SGameDirectory)
             PB.Value += 1
             ; Add the reg keys
             UpdateGameReg(SGameDirectory)
@@ -263,14 +271,6 @@ UpdateGameReg(GameDirectory) {
     RegWrite(FolderGetSize(GameDirectory), 'REG_DWORD', InstallRegKey, 'EstimatedSize')
     RegWrite('Microsoft Corporation', 'REG_SZ', InstallRegKey, 'Publisher')
     RegWrite('"' A_AhkPath '" "' A_ScriptDir '\UninstallGame.ahk" "' GameDirectory '"', 'REG_SZ', InstallRegKey, 'UninstallString')
-}
-; Returns a folder size in KB
-FolderGetSize(Location) {
-    Size := 0
-    Loop Files, Location '\*.*', 'R' {
-        Size += FileGetSize(A_LoopFileFullPath, 'K')
-    }
-    Return Size
 }
 ; Grabs the readable text from binary file
 BinGrabText(Filepath) {
