@@ -14,12 +14,7 @@ If !A_IsAdmin {
 #Include <ExtractPackage>
 
 BasePackage := ReadSetting(, 'BasePackage')
-
-Try DownloadPackages(BasePackage[1]), ExtractPackage(BasePackage[2], 'DB\000',, 1)
-Catch {
-    MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
-    ExitApp()
-}
+DownloadPackages(BasePackage), ExtractPackage(BasePackage[2], 'DB\000',, 1)
 
 Features := Map()
 Features['Main'] := []
@@ -48,7 +43,8 @@ U.SetFont('Bold s10')
 CreateImageButton(U, 0, IBBlue*)
 U.OnEvent('Click', Check4Updates)
 Check4Updates(Ctrl, Info) {
-
+    Run('Installer.ahk Update')
+    ExitApp()
 }
 
 AoEIIAIO.SetFont('Bold s10')

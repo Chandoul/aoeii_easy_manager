@@ -14,14 +14,15 @@ Try {
     Installer.AddPicture(, 'HBITMAP:*' HIcon)
 }
 Installer.SetFont('Bold s11', 'Calibri')
+Task := A_Args.Length ? A_Args[1] : 'Install'
 Installer.AddText('ym+7 cGreen', 'Age of Empires II Easy Manager Installer')
-InstallBtn := Installer.AddButton('xm+100 w100', 'Install')
+InstallBtn := Installer.AddButton('xm+100 w100', Task)
 InstallBtn.OnEvent('Click', Install)
 InstallPrg := Installer.AddProgress('xm -Smooth w300 h17')
 Installer.Show()
 Install(Ctrl, Info) {
     Try {
-        InstallBtn.Text := 'Installing...'
+        InstallBtn.Text := Task 'ing...'
         InstallBtn.Enabled := False
         AppDir := A_ProgramFiles '\AoE II AIO'
         If !DirExist(AppDir '\Lib') {
@@ -61,13 +62,13 @@ Install(Ctrl, Info) {
         UpdateGameReg(AppDir)
         InstallPrg.Value := 100
         Sleep(1000)
-        InstallBtn.Text := 'Installed'
-        If 'Yes' = MsgBox('Installation complete!`n`nWant to launch the app now?', 'Setup', 0x40 + 0x4) {
+        InstallBtn.Text := Task 'ed'
+        If 'Yes' = MsgBox(Task ' complete!`n`nWant to launch the app now?', 'Setup', 0x40 + 0x4) {
             Run(AppDir '\AoE II Manager AIO.ahk', AppDir)
         }
         ExitApp()
     } Catch Error As Err {
-        MsgBox("Installation failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Version', 0x10)
+        MsgBox(Task " failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Version', 0x10)
     }
 }
 ; Updates installation registery settings
