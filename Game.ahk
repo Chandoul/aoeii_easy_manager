@@ -145,7 +145,9 @@ SetDirectoryGR(Ctrl, Info) {
 WriteNewLocation(Location) {
     Location := StrUpper(Location)
     WriteSetting('Setting.json', 'GameLocation', Location)
-    GameLocationHistory[Location] := A_Now
+    Try GameLocationHistory[Location] := A_Now
+    Catch 
+        GameLocationHistory := Map(), GameLocationHistory[Location] := A_Now
     WriteSetting('Setting.json', 'GameLocationHistory', GameLocationHistory)
 }
 
