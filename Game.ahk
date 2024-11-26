@@ -11,7 +11,7 @@
 #Include <Prepare>
 
 GameLocation := ReadSetting('Setting.json', 'GameLocation', '')
-GameLocationHistory := ReadSetting('Setting.json', 'GameLocationHistory', '')
+GameLocationHistory := ReadSetting('Setting.json', 'GameLocationHistory')
 GRApp := A_AppData ReadSetting(, 'GRApp')
 GRSetting := A_AppData ReadSetting(, 'GRSetting')
 Game := ReadSetting(, 'Game')
@@ -145,9 +145,7 @@ SetDirectoryGR(Ctrl, Info) {
 WriteNewLocation(Location) {
     Location := StrUpper(Location)
     WriteSetting('Setting.json', 'GameLocation', Location)
-    Try GameLocationHistory[Location] := A_Now
-    Catch 
-        GameLocationHistory := Map(), GameLocationHistory[Location] := A_Now
+    GameLocationHistory[Location] := A_Now
     WriteSetting('Setting.json', 'GameLocationHistory', GameLocationHistory)
 }
 
