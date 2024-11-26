@@ -2,7 +2,10 @@
 	"AppName": "Age of Empires II Easy Manager",
 	"Author": "Smile@GR",
 	"AutoUpdate": 0,
-	"BasePackage": [""],
+	"BasePackage": [
+		"https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DB/000.7z",
+		"DB\\000.7z"
+	],
 	"GRApp": "\\GameRanger\\GameRanger\\GameRanger.exe",
 	"GRSetting": "\\GameRanger\\GameRanger Prefs\\Settings",
 	"Game": [
@@ -128,12 +131,14 @@
 		}
 	},
 	"HAI": {
-		"Possibilities": ["CLEAR"
-						, "WIN8RTM"
-						, "WIN7RTM"
-						, "RUNASADMIN"
-						, "WIN8RTM RUNASADMIN"
-						, "WIN7RTM RUNASADMIN"],
+		"Possibilities": [
+			"CLEAR",
+			"WIN8RTM",
+			"WIN7RTM",
+			"RUNASADMIN",
+			"WIN8RTM RUNASADMIN",
+			"WIN7RTM RUNASADMIN"
+		],
 		"VPNPath": "\\Hide ALL IP\\HideALLIP.exe",
 		"Layers": "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers"
 	}

@@ -1,10 +1,11 @@
 #Requires AutoHotkey v2
 #SingleInstance Force
-; Checks if the script run as admin
+
 If !A_IsAdmin {
     MsgBox('Installer must run as administrator!', 'Warning', 0x30)
     ExitApp
 }
+
 InstallRegKey := "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\AoE II AIO"
 Installer := Gui('-MinimizeBox', 'Setup')
 Installer.OnEvent('Close', (*) => ExitApp())
@@ -23,23 +24,46 @@ Install(Ctrl, Info) {
         InstallBtn.Text := 'Installing...'
         InstallBtn.Enabled := False
         AppDir := A_ProgramFiles '\AoE II AIO'
-        If !DirExist(AppDir) {
-            DirCreate(AppDir)
+        If !DirExist(AppDir '\Lib') {
+            DirCreate(AppDir '\Lib')
         }
-        InstallPrg.Value := 10
-        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/AoE II Manager AIO Ex.ahk', AppDir '\AoE II Manager AIO Ex.ahk')
-        FileCreateShortcut(AppDir '\AoE II Manager AIO Ex.ahk', A_Desktop '\AoE II Manager AIO.lnk', AppDir)
-        InstallPrg.Value := 50
-        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/SharedLib.ahk', AppDir '\SharedLib.ahk')
-        InstallPrg.Value := 80
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/CloseGame.ahk', AppDir '\Lib\CloseGame.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/DefaultPB.ahk', AppDir '\Lib\DefaultPB.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/DMBackup.ahk', AppDir '\Lib\DMBackup.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/DownloadPackage.ahk', AppDir '\Lib\DownloadPackage.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/EnableControl.ahk', AppDir '\Lib\EnableControl.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/ExecScript.ahk', AppDir '\Lib\ExecScript.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/ExtractPackage.ahk', AppDir '\Lib\ExtractPackage.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/FolderGetSize.ahk', AppDir '\Lib\FolderGetSize.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/GetConnectedState.ahk', AppDir '\Lib\GetConnectedState.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/HashFile.ahk', AppDir '\Lib\HashFile.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/IBButtons.ahk', AppDir '\Lib\IBButtons.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/ImageButton.ahk', AppDir '\Lib\ImageButton.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/Json.ahk', AppDir '\Lib\Json.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/Prepare.ahk', AppDir '\Lib\Prepare.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/ReadWriteJSON.ahk', AppDir '\Lib\ReadWriteJSON.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/ScrollBar.ahk', AppDir '\Lib\ScrollBar.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/ValidGame.ahk', AppDir '\Lib\ValidGame.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/AHK.ahk', AppDir '\AHK.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/AoE II Manager AIO.ahk', AppDir '\AoE II Manager AIO.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/AoE II Manager.json', AppDir '\AoE II Manager.json')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DDF.ahk', AppDir '\DDF.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DM.ahk', AppDir '\DM.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Fixs.ahk', AppDir '\Fixs.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Game.ahk', AppDir '\Game.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Installer.ahk', AppDir '\Installer.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Language.ahk', AppDir '\Language.ahk')
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Uninstaller.ahk', AppDir '\Uninstaller.ahk')
-        InstallPrg.Value := 90
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/UninstallGame.ahk', AppDir '\UninstallGame.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Version.ahk', AppDir '\Version.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/VM.ahk', AppDir '\VM.ahk')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/VPN.ahk', AppDir '\VPN.ahk')
         UpdateGameReg(AppDir)
         InstallPrg.Value := 100
         Sleep(1000)
         InstallBtn.Text := 'Installed'
         If 'Yes' = MsgBox('Installation complete!`n`nWant to launch the app now?', 'Setup', 0x40 + 0x4) {
-            Run(AppDir '\AoE II Manager AIO Ex.ahk', AppDir)
+            Run(AppDir '\AoE II Manager AIO.ahk', AppDir)
         }
         ExitApp()
     } Catch Error As Err {

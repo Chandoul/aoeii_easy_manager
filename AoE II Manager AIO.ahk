@@ -15,7 +15,7 @@ If !A_IsAdmin {
 
 BasePackage := ReadSetting(, 'BasePackage')
 
-Try DownloadPackages(BasePackage), ExtractPackage(BasePackage[2], 'DB\007',, 1)
+Try DownloadPackages(BasePackage), ExtractPackage(BasePackage[2], 'DB\000',, 1)
 Catch {
     MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
     ExitApp()
