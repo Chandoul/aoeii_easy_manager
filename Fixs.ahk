@@ -1,17 +1,42 @@
-#Include SharedLib.ahk
-GameFix := Map('FIX'        , ['Fix v1', 'Fix v2', 'Fix v3', 'Fix v4', 'Fix v5']
-             , 'FIXHandle'  , Map())
-Features['Fixes'] := []
-RegKey := 'HKEY_CURRENT_USER\SOFTWARE\Microsoft\Microsoft Games\Age of Empires'
-RegName := 'Aoe2Patch'
-AoEIIAIO.Title := 'GAME FIXS'
+#Requires AutoHotkey v2
+#SingleInstance Force
+
+#Include <ReadWriteJSON>
+#Include <ImageButton>
+#Include <ValidGame>
+#Include <CloseGame>
+#Include <DefaultPB>
+#Include <EnableControl>
+#Include <HashFile>
+#Include <DownloadPackage>
+#Include <ExtractPackage>
+
+AoEIIAIO := Gui(, 'GAME FIXS')
+AoEIIAIO.BackColor := 'White'
+AoEIIAIO.OnEvent('Close', (*) => ExitApp())
+AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
+AoEIIAIO.SetFont('s10', 'Calibri')
+
+GameFix := ReadSetting(, 'GameFix')
+RegKey := ReadSetting(, 'GameFixREG')
+RegName := ReadSetting(, 'GameFixREGName')
+FixPackage := ReadSetting(, 'FixPackage')
+
+Try DownloadPackage(FixPackage[1], FixPackage[2]), ExtractPackage(FixPackage[2], 'DB\001',, 1)
+Catch {
+    MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
+    ExitApp()
+}
+
+Features := Map(), Features['Fixs'] := []
+
 H := AoEIIAIO.AddText('w350 Center h25', 'Select one of the fixes below')
 H.SetFont('Bold s12')
 For Each, FIX in GameFix['FIX'] {
     H := AoEIIAIO.AddButton('w350', FIX)
     H.SetFont('Bold')
     CreateImageButton(H, 0, [[0xFFFFFF, 0,, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
-    Features['Fixes'].Push(H)
+    Features['Fixs'].Push(H)
     H.OnEvent('Click', ApplyFix)
     GameFix['FIXHandle'][FIX] := H
 }
@@ -63,9 +88,9 @@ UpdateWndMod(Ctrl, Item, Checked) {
 	}
 }
 AoEIIAIO.Show()
-GameDirectory := IniRead(Config, 'Settings', 'GameDirectory', '')
+GameDirectory := ReadSetting('Setting.json', 'GameLocation')
 If !ValidGameDirectory(GameDirectory) {
-    For Each, Fix in Features['Fixes'] {
+    For Each, Fix in Features['Fixs'] {
         Fix.Enabled := False
     }
     If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40) {
@@ -79,14 +104,14 @@ ApplyFix(Ctrl, Info) {
     Try {
         CloseGame()
         CleansUp()
-        DefaultPB(Features['Fixes'])
-        EnableControls(Features['Fixes'], 0)
+        DefaultPB(Features['Fixs'])
+        EnableControls(Features['Fixs'], 0)
         DirCopy('DB\001\' Ctrl.Text, GameDirectory, 1)
         If Ctrl.Text ~= 'v3|v4' {
             RegWrite('RUNASADMIN WINXPSP3', 'REG_SZ', RegKey, GameDirectory '\empires2.exe')
             RegWrite('RUNASADMIN WINXPSP3', 'REG_SZ', RegKey, GameDirectory '\age2_x1\age2_x1.exe')
         }
-        EnableControls(Features['Fixes'])
+        EnableControls(Features['Fixs'])
         AnalyzeFix()
         SoundPlay('DB\000\30 Wololo.mp3')
     } Catch Error As Err {

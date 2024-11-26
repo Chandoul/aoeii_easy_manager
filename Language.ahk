@@ -1,12 +1,37 @@
-#Include SharedLib.ahk
+#Requires AutoHotkey v2
+#SingleInstance Force
+
+#Include <ImageButton>
+#Include <ReadWriteJSON>
+#Include <ValidGame>
+#Include <HashFile>
+#Include <DefaultPB>
+#Include <EnableControl>
+#Include <CloseGame>
+#Include <DownloadPackage>
+#Include <ExtractPackage>
+
+GameDirectory := ReadSetting('Setting.json', 'GameLocation')
+LngPackage := ReadSetting(, 'LngPackage')
+
+AoEIIAIO := Gui(, 'GAME INTERFACE LANGUAGES')
+AoEIIAIO.BackColor := 'White'
+AoEIIAIO.OnEvent('Close', (*) => ExitApp())
+AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
+AoEIIAIO.SetFont('s10', 'Calibri')
+
+Try DownloadPackage(LngPackage[1], LngPackage[2]), ExtractPackage(LngPackage[2], 'DB\006',, 1)
+Catch {
+    MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
+    ExitApp()
+}
+
 GameLanguage := Map()
-Features['Language'] := []
-AoEIIAIO.Title := 'GAME INTERFACE LANGUAGES'
+Features := Map(), Features['Language'] := []
 Index := 0
 Loop Files, 'DB\006\*', 'D' {
-    If (A_LoopFileName = 'Restore') {
+    If (A_LoopFileName = 'Restore')
         Continue
-    }
     ++Index
     H := AoEIIAIO.AddButton('w200' (Mod(Index, 6) = 1 ? ' ym' : ''), A_LoopFileName)
     H.SetFont('Bold s11')
@@ -22,7 +47,6 @@ Features['Language'].Push(H)
 H.OnEvent('Click', ApplyLanguage)
 GameLanguage['Restore'] := H
 AoEIIAIO.Show()
-GameDirectory := IniRead(Config, 'Settings', 'GameDirectory', '')
 If !ValidGameDirectory(GameDirectory) {
     For Each, Version in Features['Language'] {
         Version.Enabled := False

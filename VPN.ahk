@@ -1,20 +1,21 @@
-#Include SharedLib.ahk
-AoEIIAIO.Title := 'HIDE ALL IP TRIAL RESET'
-Possibilities := [
-    'CLEAR'
-  , 'WIN8RTM'
-  , 'WIN7RTM'
-  , 'RUNASADMIN'
-  , 'WIN8RTM RUNASADMIN'
-  , 'WIN7RTM RUNASADMIN'
-]
-If A_Is64bitOS {
-    VPNPath := EnvGet('ProgramFiles(x86)') '\Hide ALL IP\HideALLIP.exe'
-    SetRegView(64)
-} Else {
-    VPNPath := EnvGet('ProgramFiles') '\Hide ALL IP\HideALLIP.exe'
-    SetRegView(32)
-}
+#Requires AutoHotkey v2
+#SingleInstance Force
+
+#Include <ReadWriteJSON>
+
+GRApp := ReadSetting(, 'GRApp')
+HAI := ReadSetting(, 'HAI')
+Possibilities := HAI['Possibilities']
+VPNPath := (A_Is64bitOS ? EnvGet('ProgramFiles(x86)') : EnvGet('ProgramFiles')) HAI['VPNPath']
+SetRegView(A_Is64bitOS ? 64 : 32)
+Layers := HAI['Layers']
+
+AoEIIAIO := Gui(, 'HIDE ALL IP TRIAL RESET')
+AoEIIAIO.BackColor := 'White'
+AoEIIAIO.OnEvent('Close', (*) => ExitApp())
+AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
+AoEIIAIO.SetFont('s10 Bold', 'Calibri')
+
 AoEIIAIO.SetFont('s16')
 H := AoEIIAIO.AddButton(, 'Hide All IP Trial Reset [ Attempt ' (Index := 1) ' / ' Possibilities.Length ' ]')
 H.SetFont('s10 Bold', 'Calibri')

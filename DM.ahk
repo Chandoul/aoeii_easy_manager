@@ -1,9 +1,29 @@
-#Include SharedLib.ahk
-GameLanguage := Map()
-Features['DM'] := []
+#Requires AutoHotkey v2
+#SingleInstance Force
+
+#Include <ScrollBar>
+#Include <ImageButton>
+#Include <ReadWriteJSON>
+#Include <DownloadPackage>
+#Include <ExtractPackage>
+#Include <ValidGame>
+#Include <EnableControl>
+#Include <GetConnectedState>
+#Include <DMBackup>
+#Include <CloseGame>
+
+GameDirectory := ReadSetting('Setting.json', 'GameLocation')
+DMPackage := ReadSetting(, 'DMPackage')
+
+AoEIIAIO := Gui(, 'GAME DATA MODS')
+AoEIIAIO.BackColor := 'White'
+AoEIIAIO.OnEvent('Close', (*) => ExitApp())
+AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
+AoEIIAIO.SetFont('s10', 'Calibri')
+
+Features := Map(), Features['DM'] := []
 DMList := Map()
 DMListH := Map()
-AoEIIAIO.Title := 'GAME DATA MODS'
 AoEIIAIOSB := ScrollBar(AoEIIAIO, 200, 400)
 HotIfWinActive("ahk_id " AoEIIAIO.Hwnd)
 Hotkey("WheelUp", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
@@ -25,8 +45,7 @@ AoEIIAIO.AddText('Center w460', 'Search')
 Search := AoEIIAIO.AddEdit('Border Center -E0x200 w460')
 Search.OnEvent('Change', (*) => UpdateList())
 Features['DM'].Push(Search)
-For Each, DataMod in StrSplit(IniRead('DB\000\DM\DataMod.ini', 'DataMod',, ''), '`n') {
-    ModName := StrSplit(DataMod, '=')[1]
+For ModName, DataMod in DMPackage {
     DMList[ModName] := Map()
     DMListH[Index := Format('{:03}', A_Index)] := Map()
     M := AoEIIAIO.AddButton('xm w460 h40 Left', '...')
@@ -39,7 +58,7 @@ For Each, DataMod in StrSplit(IniRead('DB\000\DM\DataMod.ini', 'DataMod',, ''), 
     DMList[ModName]['Img'] := 'DB\000\DM\' ModName '.png'
     DMListH[Index]['Img'] := M
     Features['DM'].Push(M)
-    Description := FileExist('DB\000\DM\' ModName '.txt') ? FileRead('DB\000\DM\' ModName '.txt') : ''
+    Description := DataMod['Description']
     DMList[ModName]['Description'] := Description
     M := AoEIIAIO.AddEdit('ReadOnly -E0x200 yp w300 h113 HScroll -HScroll BackgroundWhite', '...')
     DMList[ModName]['Description'] := Description
@@ -61,14 +80,11 @@ For Each, DataMod in StrSplit(IniRead('DB\000\DM\DataMod.ini', 'DataMod',, ''), 
     Features['DM'].Push(M)
 }
 AoEIIAIO.Show('w500 h400')
-GameDirectory := IniRead(Config, 'Settings', 'GameDirectory', '')
 If !ValidGameDirectory(GameDirectory) {
-    For Each, Fix in Features['Fixes'] {
+    For Each, Fix in Features['DM']
         Fix.Enabled := False
-    }
-    If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40) {
+    If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40)
         Run('Game.ahk')
-    }
     ExitApp()
 }
 UpdateList()
@@ -113,76 +129,53 @@ UpdateList() {
     }
 }
 UpdateDM(Ctrl, Info) {
-    Try { 
-        P := InStr(Ctrl.Text, ' ')
-        Apply := SubStr(Ctrl.Text, 1, P - 1) = 'Install'
-        DMName := SubStr(Ctrl.Text, P + 1)
-        If DMName = '...' {
-            Return
-        }
-        EnableControls(Features['DM'], 0)
-        Update(Ctrl, Progress, Default := 0) {
-            If !Default {
-                If Apply {
-                    Ctrl.Text := 'Installing... ( ' Progress ' % )'
-                    CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
-                    Ctrl.Redraw()
-                } Else {
-                    Ctrl.Text := 'Uninstalling... ( ' Progress ' % )'
-                    CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
-                    Ctrl.Redraw()
-                }
-            } Else {
-                If Apply {
-                    Ctrl.Text := 'Install ' DMName
-                    CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
-                    Ctrl.Redraw()
-                } Else {
-                    Ctrl.Text := 'Uninstall ' DMName
-                    CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
-                    Ctrl.Redraw()
-                }
-            }
-        }
-        If Apply {
-            If ConnectedToInternet() {
-                ; Tries to download the mod if doesn't exist or outdated
-                NamePart := IniRead('DB\000\DM\DataMod.ini', 'DataMod', DMName, '')
-                If !NamePart {
-                    Return
-                }
-                NamePart := StrSplit(NamePart, '|')
-                Parts := StrSplit(NamePart[2], ',')
-                PackagesHashs := UpdatedPackagesHashs()
-                P := 50 / Parts.Length
-                For Each, Part in Parts {
-                    Update(Ctrl, P * Each)
-                    If FileExist('DB\' NamePart[1] '.7z.' Part)
-                    && PackagesHashs.Has('DB\' NamePart[1] '.7z.' Part)
-                    && HashFile('DB\' NamePart[1] '.7z.' Part) != PackagesHashs['DB\' NamePart[1] '.7z.' Part] {
-                        FileDelete('DB\' NamePart[1] '.7z.' Part)
-                    }
-                    DownloadPackage((NamePart[3] = 1 ? DownloadDB1 : DownloadDB2), 'DB/' NamePart[1] '.7z.' Part, 'DB\' NamePart[1] '.7z.' Part, 'DB\' NamePart[1])
-                }
-            }
-            Update(Ctrl, 50)
-            If FileExist('DB\' NamePart[1] '.7z.001') {
-                ExtractPackage('DB\' NamePart[1] '.7z.001', GameDirectory, 1)
-            }
-            Update(Ctrl, 100)
-            Sleep(1000)
-            Update(Ctrl, 100, 1)
-        } Else {
-            If FileExist(GameDirectory '\Games\age2_x1.xml') {
-                FileDelete(GameDirectory '\Games\age2_x1.xml')
-            }
-            Update(Ctrl, 100)
-            Sleep(1000)
-            Update(Ctrl, 100, 1)
-        }
-        EnableControls(Features['DM'])
-    } Catch Error As Err {
-        MsgBox("Select failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Fix', 0x10)
-        Ctrl.Enabled := True
+    P := InStr(Ctrl.Text, ' ')
+    Apply := SubStr(Ctrl.Text, 1, P - 1) = 'Install'
+    DMName := SubStr(Ctrl.Text, P + 1)
+    If DMName = '...' {
+        Return
     }
+    EnableControls(Features['DM'], 0)
+    Update(Ctrl, Progress, Default := 0) {
+        If !Default {
+            If Apply {
+                Ctrl.Text := 'Installing... ( ' Progress ' % )'
+                CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+                Ctrl.Redraw()
+            } Else {
+                Ctrl.Text := 'Uninstalling... ( ' Progress ' % )'
+                CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+                Ctrl.Redraw()
+            }
+        } Else {
+            If Apply {
+                Ctrl.Text := 'Install ' DMName
+                CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+                Ctrl.Redraw()
+            } Else {
+                Ctrl.Text := 'Uninstall ' DMName
+                CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+                Ctrl.Redraw()
+            }
+        }
+    }
+    CloseGame()
+    If Apply {
+        If GetConnectedState()
+            DownloadPackages(DMPackage[DMName]['Package'])
+        DMBackup(GameDirectory)
+        FirstPart := DMPackage[DMName]['Package'][2]
+        If FileExist(FirstPart)
+            ExtractPackage(FirstPart, 'tmp\' DMName,, 1)
+        DMBackup(GameDirectory,, DMName, 2)
+        DirCopy('tmp\' DMName, GameDirectory, 1)
+        MsgBox(DMName ' - should be installed by now!', 'Data mod', 0x40)
+    } Else {
+        If FileExist(GameDirectory '\Games\age2_x1.xml') {
+            FileDelete(GameDirectory '\Games\age2_x1.xml')
+        }
+        DMBackup(GameDirectory,,, 1)
+        MsgBox(DMName ' - should be uninstalled by now!', 'Data mod', 0x40)
+    }
+    EnableControls(Features['DM'])
 }

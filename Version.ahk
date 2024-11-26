@@ -1,13 +1,37 @@
-#Include SharedLib.ahk
-GameVersion := Map('aokCombine' , Map('2.0b', '2.0a')
-                 , 'aocCombine' , Map('1.0e', '1.0c', '1.1', '1.0c', '1.5', '1.0c') )
+#Requires AutoHotkey v2
+#SingleInstance Force
 
-AoEIIAIO.Title := 'GAME VERSION'
+#Include <ImageButton>
+#Include <ReadWriteJSON>
+#Include <ValidGame>
+#Include <CloseGame>
+#Include <HashFile>
+#Include <DownloadPackage>
+#Include <ExtractPackage>
+#Include <Prepare>
+
+GameVersion := ReadSetting(, 'RequireVersion')
+GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
+VersionPackage := ReadSetting(, 'VersionPackage')
+
+Try DownloadPackage(VersionPackage[1], VersionPackage[2]), ExtractPackage(VersionPackage[2], 'DB\002',, 1)
+Catch {
+    MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
+    ExitApp()
+}
+
+AoEIIAIO := Gui(, 'GAME VERSION')
+AoEIIAIO.BackColor := 'White'
+AoEIIAIO.OnEvent('Close', (*) => ExitApp())
+AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
+AoEIIAIO.SetFont('s10 Bold', 'Calibri')
+
 H := AoEIIAIO.AddText('cRed w150 Center h30', 'The Age of Kings')
 H.SetFont('Bold s12')
 H := AoEIIAIO.AddPicture('xp+59 yp+30', 'DB\000\aok.png')
 H.OnEvent('Click', LaunchGame)
 AoEIIAIO.AddText('xp-59 yp+35 w1 h1')
+Features := Map(), Features['Version'] := []
 GameVersion['aok'] := Map()
 Loop Files, 'DB\002\aok\*', 'D' {
     H := AoEIIAIO.AddButton('w150', AOK := A_LoopFileName)
@@ -15,7 +39,9 @@ Loop Files, 'DB\002\aok\*', 'D' {
     CreateImageButton(H, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
     H.OnEvent('Click', ApplyVersion)
     GameVersion['aok'][H] := 1
+    Features['Version'].Push(H)
 }
+
 H := AoEIIAIO.AddText('cBlue ym w150 Center h30', 'The Conquerors')
 H.SetFont('Bold s12')
 H := AoEIIAIO.AddPicture('xp+59 yp+30', 'DB\000\aoc.png')
@@ -28,7 +54,9 @@ Loop Files, 'DB\002\aoc\*', 'D' {
     CreateImageButton(H, 0, [[0xFFFFFF,, 0x0000FF, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
     H.OnEvent('Click', ApplyVersion)
     GameVersion['aoc'][H] := 2
+    Features['Version'].Push(H)
 }
+
 H := AoEIIAIO.AddText('cGreen ym w150 Center h30', 'Forgotten Empires')
 H.SetFont('Bold s12')
 H := AoEIIAIO.AddPicture('xp+59 yp+30', 'DB\000\fe.png')
@@ -41,20 +69,19 @@ Loop Files, 'DB\002\fe\*', 'D' {
     CreateImageButton(H, 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
     H.OnEvent('Click', ApplyVersion)
     GameVersion['fe'][H] := 3
+    Features['Version'].Push(H)
 }
+
 AoEIIAIO.Show()
-GameDirectory := IniRead(Config, 'Settings', 'GameDirectory', '')
+AnalyzeVersion()
 If !ValidGameDirectory(GameDirectory) {
-    For Each, Version in Features['Version'] {
-        Version.Enabled := False
-    }
-    If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40) {
+    For Each, Fix in Features['Version']
+        Fix.Enabled := False
+    If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40)
         Run('Game.ahk')
-    }
     ExitApp()
 }
-AnalyzeVersion()
-; Finds which game to patch
+
 FindGame(Ctrl) {
     FGame := ''
     If GameVersion['aok'].Has(Ctrl) {
@@ -68,7 +95,7 @@ FindGame(Ctrl) {
     }
     Return FGame
 }
-; Cleans up
+
 CleansUp(FGame) {
     Loop Files, 'DB\002\' FGame '\*', 'D' {
         Version := A_LoopFileName
@@ -80,7 +107,7 @@ CleansUp(FGame) {
         }
     }
 }
-; Applys the selected version files
+
 ApplyReqVersion(Ctrl, FGame) {
     If GameVersion.Has(FGame 'Combine') 
     && GameVersion[FGame 'Combine'].Has(Ctrl.Text) {
@@ -94,17 +121,11 @@ ApplyReqVersion(Ctrl, FGame) {
 }
 ApplyVersion(Ctrl, Info) {
     Try {
-        ; Disables game buttons
         DisableOptions(FGame := FindGame(Ctrl))
-        ; Closes the game if running
         CloseGame()
-        ; Cleans up previous applied version
         CleansUp(FGame)
-        ; Applys the selected version files
         ApplyReqVersion(Ctrl, FGame)
-        ; Analyzes the game folder
         AnalyzeVersion()
-        ; Finish
         SoundPlay('DB\000\30 Wololo.mp3')
     } Catch Error As Err {
         MsgBox("Version set failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File

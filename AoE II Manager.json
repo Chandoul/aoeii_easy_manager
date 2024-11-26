@@ -1,0 +1,140 @@
+{
+	"AppName": "Age of Empires II Easy Manager",
+	"Author": "Smile@GR",
+	"AutoUpdate": 0,
+	"BasePackage": [""],
+	"GRApp": "\\GameRanger\\GameRanger\\GameRanger.exe",
+	"GRSetting": "\\GameRanger\\GameRanger Prefs\\Settings",
+	"Game": [
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/003.7z.001",
+		"DB\\003.7z.001",
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/003.7z.002",
+		"DB\\003.7z.002",
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/003.7z.003",
+		"DB\\003.7z.003",
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/003.7z.004",
+		"DB\\003.7z.004",
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/004.7z.001",
+		"DB\\004.7z.001",
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/004.7z.002",
+		"DB\\004.7z.002",
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/004.7z.003",
+		"DB\\004.7z.003",
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/005.7z.001",
+		"DB\\005.7z.001"
+	],
+	"VersionPackage": [
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/002.7z.001",
+		"DB\\002.7z.001"
+	],
+	"GameREG": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Age of Empires II AIO",
+	"Theme": "Default",
+	"Version": "2.5",
+	"RequireVersion": {
+		"aokCombine": {
+			"2.0b": "2.0a"
+		},
+		"aocCombine": {
+			"1.0e": "1.0c",
+			"1.1": "1.0c",
+			"1.5": "1.0c"
+		}
+	},
+	"GameFix": {
+		"FIX": [
+			"Fix v1",
+			"Fix v2",
+			"Fix v3",
+			"Fix v4",
+			"Fix v5"
+		],
+		"FIXHandle": {}
+	},
+	"GameFixREG": "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Microsoft Games\\Age of Empires",
+	"GameFixREGName": "Aoe2Patch",
+	"FixPackage": [
+		"https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DB/001.7z",
+		"DB\\001.7z"
+	],
+	"LngPackage": [
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/006.7z.001",
+		"DB\\006.7z.001"
+	],
+	"DrsMap": {
+		"gra": "graphics.drs",
+		"int": "interfac.drs",
+		"ter": "terrain.drs"
+	},
+	"VMPackage": [
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/007.7z.001",
+		"DB\\007.7z.001",
+		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/007.7z.002",
+		"DB\\007.7z.002"
+	],
+	"DMPackage": {
+		"Allied Vision": {
+			"Package": [
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/013.7z.001",
+				"DB\\013.7z.001"
+			],
+			"Description": "by Justin\nGives free cartography at start of game."
+		},
+		"DE Balance - Allied Vision": {
+			"Package": [
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/009.7z.001",
+				"DB\\009.7z.001",
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/009.7z.002",
+				"DB\\009.7z.002"
+			],
+			"Description": "by _everaoc_\n'The Conquerors Updated' mod with shared allies' line of sight."
+		},
+		"WololoKingdoms": {
+			"Package": [
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/010.7z.001",
+				"DB\\010.7z.001",
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/010.7z.002",
+				"DB\\010.7z.002",
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/010.7z.003",
+				"DB\\010.7z.003",
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/010.7z.004",
+				"DB\\010.7z.004",
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/010.7z.005",
+				"DB\\010.7z.005"
+			],
+			"Description": "by Tails8521, Jineapple, TriRem, TWest\nPlay the HD Expansions on Voobly"
+		},
+		"Sheep vs Wolf 2": {
+			"Package": [
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/011.7z.001",
+				"DB\\011.7z.001"
+			],
+			"Description": "by Gallas\nSheep vs Wolf 2 is a random map based hunter / prey mod. New civ bonuses, units, buildings, graphics, sounds and gameplay! Hide in forest and build a fortress, or hunt for animals and search for Sheep!"
+		},
+		"VUBG": {
+			"Package": [
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/012.7z.001",
+				"DB\\012.7z.001"
+			],
+			"Description": "by Gallas\nSearch for weapons and be the last survivor of the island!"
+		},
+		"Realms": {
+			"Package": [
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/014.7z.001",
+				"DB\\014.7z.001",
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/014.7z.002",
+				"DB\\014.7z.002"
+			],
+			"Description": "by [MM]Vardamir117\nRealms is a project to consider more of the medieval world. Explore new ways to build and wage war in the peaks of the Himalayas, the coast of Peru, the jungles of Southeast Asia, Cilicia, Manchuria, and Europe with nineteen new civilizations."
+		}
+	},
+	"HAI": {
+		"Possibilities": ["CLEAR"
+						, "WIN8RTM"
+						, "WIN7RTM"
+						, "RUNASADMIN"
+						, "WIN8RTM RUNASADMIN"
+						, "WIN7RTM RUNASADMIN"],
+		"VPNPath": "\\Hide ALL IP\\HideALLIP.exe",
+		"Layers": "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers"
+	}
+}

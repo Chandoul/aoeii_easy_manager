@@ -1,3 +1,13 @@
-DB
+DB/000
+DB/001
+DB/002
+DB/006
+DB/007
+DB/*.001
+DB/*.002
+DB/*.003
+DB/*.004
+DB/*.exe
 Shortcuts
 Config.ini
+tmp/

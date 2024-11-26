@@ -1,9 +1,33 @@
-#Include SharedLib.ahk
-GameLanguage := Map()
-Features['VM'] := []
+#Requires AutoHotkey v2
+#SingleInstance Force
+
+#Include <ScrollBar>
+#Include <ImageButton>
+#Include <ReadWriteJSON>
+#Include <ValidGame>
+#Include <EnableControl>
+#Include <ExtractPackage>
+#Include <DownloadPackage>
+
+GameDirectory := ReadSetting('Setting.json', 'GameLocation')
+DrsMap := ReadSetting(, 'DrsMap')
+VMPackage := ReadSetting(, 'VMPackage')
+
+AoEIIAIO := Gui(, 'GAME VISUAL MODS')
+AoEIIAIO.BackColor := 'White'
+AoEIIAIO.OnEvent('Close', (*) => ExitApp())
+AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
+AoEIIAIO.SetFont('s10', 'Calibri')
+
+Try DownloadPackages(VMPackage), ExtractPackage(VMPackage[2], 'DB\007',, 1)
+Catch {
+    MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
+    ExitApp()
+}
+
+Features := Map(), Features['VM'] := []
 VMList := Map()
 VMListH := Map()
-AoEIIAIO.Title := 'GAME VISUAL MODS'
 AoEIIAIOSB := ScrollBar(AoEIIAIO, 200, 400)
 HotIfWinActive("ahk_id " AoEIIAIO.Hwnd)
 Hotkey("WheelUp", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
@@ -60,9 +84,8 @@ Loop Files, 'DB\007\*', 'D' {
     Features['VM'].Push(M)
 }
 AoEIIAIO.Show('w500 h400')
-GameDirectory := IniRead(Config, 'Settings', 'GameDirectory', '')
 If !ValidGameDirectory(GameDirectory) {
-    For Each, Fix in Features['Fixes'] {
+    For Each, Fix in Features['VM'] {
         Fix.Enabled := False
     }
     If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40) {
