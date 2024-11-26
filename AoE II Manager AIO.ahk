@@ -166,7 +166,7 @@ OpenGameFolder() {
     }
 }
 
-GameDirectory := ReadSetting('Setting.json', 'GameLocation')
+GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 If !ValidGameDirectory(GameDirectory) {
     P.Value := 'DB\000\gameoff.png'
     For Each, Version in Features['Main'] {

@@ -10,8 +10,8 @@
 #Include <ReadWriteJSON>
 #Include <Prepare>
 
-GameLocation := ReadSetting('Setting.json', 'GameLocation')
-GameLocationHistory := ReadSetting('Setting.json', 'GameLocationHistory')
+GameLocation := ReadSetting('Setting.json', 'GameLocation', '')
+GameLocationHistory := ReadSetting('Setting.json', 'GameLocationHistory', '')
 GRApp := A_AppData ReadSetting(, 'GRApp')
 GRSetting := A_AppData ReadSetting(, 'GRSetting')
 Game := ReadSetting(, 'Game')

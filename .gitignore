@@ -11,3 +11,5 @@ DB/*.exe
 Shortcuts
 Config.ini
 tmp/
+Setting.json
+SharedLib.ahk

@@ -26,6 +26,7 @@
 		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/005.7z.001",
 		"DB\\005.7z.001"
 	],
+	"GameInstallREG": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Age of Empires II AIO",
 	"VersionPackage": [
 		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/002.7z.001",
 		"DB\\002.7z.001"

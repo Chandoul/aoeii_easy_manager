@@ -4,7 +4,7 @@
 #Include <ValidGame>
 #Include <ReadWriteJSON>
 
-GameDirectory := ReadSetting('Setting.json', 'GameLocation')
+GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 
 AoEIIAIO := Gui(, 'DIRECT DRAW FIX')
 AoEIIAIO.BackColor := 'White'

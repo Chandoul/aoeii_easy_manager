@@ -25,9 +25,11 @@ Install(Ctrl, Info) {
         InstallBtn.Text := Task 'ing...'
         InstallBtn.Enabled := False
         AppDir := A_ProgramFiles '\AoE II AIO'
-        If !DirExist(AppDir '\Lib') {
+        If !DirExist(AppDir '\Lib')
             DirCreate(AppDir '\Lib')
-        }
+        If !DirExist(AppDir '\DB')
+            DirCreate(AppDir '\DB')
+        Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DB/7za.exe', AppDir '\DB\7za.exe')
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/CloseGame.ahk', AppDir '\Lib\CloseGame.ahk')
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/DefaultPB.ahk', AppDir '\Lib\DefaultPB.ahk')
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/DMBackup.ahk', AppDir '\Lib\DMBackup.ahk')

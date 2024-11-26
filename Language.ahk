@@ -11,8 +11,8 @@
 #Include <DownloadPackage>
 #Include <ExtractPackage>
 
-GameDirectory := ReadSetting('Setting.json', 'GameLocation')
-LngPackage := ReadSetting(, 'LngPackage')
+GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
+LngPackage := ReadSetting(, 'LngPackage', [])
 
 AoEIIAIO := Gui(, 'GAME INTERFACE LANGUAGES')
 AoEIIAIO.BackColor := 'White'

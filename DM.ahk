@@ -12,7 +12,7 @@
 #Include <DMBackup>
 #Include <CloseGame>
 
-GameDirectory := ReadSetting('Setting.json', 'GameLocation')
+GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 DMPackage := ReadSetting(, 'DMPackage')
 
 AoEIIAIO := Gui(, 'GAME DATA MODS')

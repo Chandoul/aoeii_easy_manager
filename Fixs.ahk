@@ -88,7 +88,7 @@ UpdateWndMod(Ctrl, Item, Checked) {
 	}
 }
 AoEIIAIO.Show()
-GameDirectory := ReadSetting('Setting.json', 'GameLocation')
+GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 If !ValidGameDirectory(GameDirectory) {
     For Each, Fix in Features['Fixs'] {
         Fix.Enabled := False
