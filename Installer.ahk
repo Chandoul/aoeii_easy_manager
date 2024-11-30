@@ -22,13 +22,12 @@ InstallPrg := Installer.AddProgress('xm -Smooth w300 h17')
 Installer.Show()
 Install(Ctrl, Info) {
     Try {
-        InstallBtn.Text := Task 'ing...'
+        InstallBtn.Text := SubStr(Task, 1, -1) 'ing...'
         InstallBtn.Enabled := False
         AppDir := A_ProgramFiles '\AoE II AIO'
-        If !DirExist(AppDir '\Lib')
-            DirCreate(AppDir '\Lib')
-        If !DirExist(AppDir '\DB')
-            DirCreate(AppDir '\DB')
+        For Dir in [AppDir '\Lib', AppDir '\DB']
+            If !DirExist(Dir)
+                DirCreate(Dir)
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DB/7za.exe', AppDir '\DB\7za.exe')
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/CloseGame.ahk', AppDir '\Lib\CloseGame.ahk')
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Lib/DefaultPB.ahk', AppDir '\Lib\DefaultPB.ahk')
@@ -61,6 +60,7 @@ Install(Ctrl, Info) {
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Version.ahk', AppDir '\Version.ahk')
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/VM.ahk', AppDir '\VM.ahk')
         Download('https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/VPN.ahk', AppDir '\VPN.ahk')
+        FileCreateShortcut(AppDir '\AoE II Manager AIO.ahk', A_Desktop '\AoE II Manager AIO.lnk', AppDir,,, A_AhkPath)
         UpdateGameReg(AppDir)
         InstallPrg.Value := 100
         Sleep(1000)
