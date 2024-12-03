@@ -20,6 +20,7 @@ Features := Map()
 Features['Main'] := []
 AppName := ReadSetting(, 'AppName')
 Version := ReadSetting(, 'Version')
+Latest := ReadSetting(, 'Latest')
 
 AoEIIAIO := Gui(, 'Age of Empires II Easy Manager!')
 AoEIIAIO.BackColor := 'White'
@@ -43,8 +44,29 @@ U.SetFont('Bold s10')
 CreateImageButton(U, 0, IBBlue*)
 U.OnEvent('Click', Check4Updates)
 Check4Updates(Ctrl, Info) {
-    Run('Installer.ahk Update')
-    ExitApp()
+    Try {
+        Ctrl.Enabled := False
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        whr.Open("GET", Latest[1], True)
+        whr.Send()
+        whr.WaitForResponse()
+        LVersion := JSON.Load(whr.ResponseText)['Version']
+        whr := ''
+        If LVersion > Version {
+            If 'Yes' != MsgBox('New update was found! version = ' LVersion '`nDownload the new update?', 'Update', 0x4 + 0x40) {
+                Ctrl.Enabled := True
+                Return
+            }
+            Download(Latest[2], A_Temp '\AoE II Manager AIO.exe')
+            Run(A_Temp '\AoE II Manager AIO.exe')
+            ExitApp()
+        }
+        MsgBox('You got the latest update!', 'Update', 0x40)
+        Ctrl.Enabled := True
+    } Catch {
+        MsgBox('Unable to check updates!, please make sure you are well connected to the internet before you update.', 'Update check error!', 0x30)
+        Ctrl.Enabled := True
+    }
 }
 
 AoEIIAIO.SetFont('Bold s10')
@@ -145,6 +167,28 @@ LaunchDDF(Ctrl, Info) {
 
 }
 
+H := AoEIIAIO.AddButton('yp wp+160', 'GameRanger Account Switcher')
+CreateImageButton(H, 0, IBBlack*)
+H.OnEvent('Click', LaunchGRAS)
+Features['Main'].Push(H)
+LaunchGRAS(Ctrl, Info) {
+    Try Run('GRAS.ahk')
+    Catch Error As Err
+        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'DirectDraw', 0x10)
+
+}
+
+H := AoEIIAIO.AddButton('yp w150', 'RPG Maps')
+CreateImageButton(H, 0, IBBlack*)
+H.OnEvent('Click', LaunchRPG)
+Features['Main'].Push(H)
+LaunchRPG(Ctrl, Info) {
+    Try Run('RPG.ahk')
+    Catch Error As Err
+        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'DirectDraw', 0x10)
+
+}
+
 AoEIIAIO.Show()
 
 R.Redraw()
@@ -158,19 +202,24 @@ T.Redraw()
 P.Move((W - 373) / 2)
 WD.Move(,, W - 16)
 WD.SetFont('Bold s10', 'Segoe UI')
+CreateImageButton(WD, 0, IBGray*)
 WD.OnEvent('Click', (*) => OpenGameFolder())
 OpenGameFolder() {
-    GameDirectory := ReadSetting('Setting.json', 'GameLocation')
+    GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
     If ValidGameDirectory(GameDirectory) {
         Run(GameDirectory '\')
-    }
+    } Else MsgBox('You must select your game folder!', 'Info', 0x30)
 }
-
 GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 If !ValidGameDirectory(GameDirectory) {
     P.Value := 'DB\000\gameoff.png'
     For Each, Version in Features['Main'] {
-        Version.Enabled := False
+        Switch Version.Text {
+            Case "Hide All IP"
+               , "GameRanger Account Switcher"
+               , "Shortcuts": Continue
+            Default: Version.Enabled := False
+        }
     }
     If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40) {
         Run('Game.ahk')

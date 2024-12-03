@@ -10,9 +10,9 @@ AoEIIAIO.OnEvent('Close', (*) => ExitApp())
 AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
 AoEIIAIO.SetFont('s10 Bold', 'Segoe UI')
 
-LV := AoEIIAIO.AddListView('w600 cGreen', ['Currently running shortcuts'])
-LV.Add(, '✓ [ 1 ] Exits the game using [ Win ] + [ q ]')
-LV.Add(, '✓ [ 2 ] Unselects one unit on a group selection using [ Alt ] + [ Right Mouse Button ]')
+LV := AoEIIAIO.AddListView('w600 cGreen r10', ['Currently running shortcuts'])
+LV.Add(, '✓ [ 1 ] AoE II: Exits the game using [ Win ] + [ q ]')
+LV.Add(, '✓ [ 2 ] AoE II: Unselects one unit on a group selection using [ Alt ] + [ Right Mouse Button ]')
 Loop Files, 'Shortcuts\*.ahk' {
     LV.Add(, '✓ [ ' A_Index + 2 ' ] Additional scripts - [ ' A_LoopFileName ' ]')
     ExecScript(A_LoopFileFullPath)
