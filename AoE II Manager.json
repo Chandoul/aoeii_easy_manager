@@ -37,7 +37,7 @@
 	],
 	"GameREG": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Age of Empires II AIO",
 	"Theme": "Default",
-	"Version": "2.5",
+	"Version": "2.6",
 	"RequireVersion": {
 		"aokCombine": {
 			"2.0b": "2.0a"
@@ -133,6 +133,13 @@
 				"DB\\014.7z.002"
 			],
 			"Description": "by [MM]Vardamir117\nRealms is a project to consider more of the medieval world. Explore new ways to build and wage war in the peaks of the Himalayas, the coast of Peru, the jungles of Southeast Asia, Cilicia, Manchuria, and Europe with nineteen new civilizations."
+		},
+		"Elemental TD": {
+			"Package": [
+				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/015.7z.001",
+				"DB\\015.7z.001"
+			],
+			"Description": "by BinaryPotka\nNew 2023 TD mod with Elemental Towers."
 		}
 	},
 	"HAI": {

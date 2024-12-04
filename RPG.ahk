@@ -27,7 +27,9 @@ If !ValidGameDirectory(GameDirectory) {
 Loop Files, GameDirectory '\Scenario\*.scx'
     ScxList.Add(, A_LoopFileName)
 
-StrutureParse(Ctrl, Item, Info) {
+StrutureParse(Ctrl, Item, Selected) {
+    If !Selected 
+        Return
     File := GameDirectory '\Scenario\' Ctrl.GetText(Item)
     Obj := FileOpen(File, 'r')
     Buff := Buffer(4), Obj.RawRead(Buff, 4)
@@ -35,8 +37,11 @@ StrutureParse(Ctrl, Item, Info) {
     InfoStr.Value := 'Version: ' Version
     Obj.Pos := 16
     Buff := Buffer(4), Obj.RawRead(Buff, 4)
-    InstructionsLen := NumGet(Buff, 0, 'UInt')
-    Buff := Buffer(InstructionsLen), Obj.RawRead(Buff, InstructionsLen)
-    Instructions := StrGet(Buff, InstructionsLen, 'cp0')
+    Instructions := ''
+    If InstructionsLen := NumGet(Buff, 0, 'UInt') {
+        Buff := Buffer(InstructionsLen), Obj.RawRead(Buff, InstructionsLen)
+        Instructions := StrGet(Buff, InstructionsLen, 'cp0')
+    }
     ValueStr.Value := Instructions
+    Buff := ''
 }
