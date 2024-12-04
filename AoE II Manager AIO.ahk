@@ -6,6 +6,17 @@ If !A_IsAdmin {
     ExitApp
 }
 
+If A_Args.Length {
+    Args := StrSplit(A_Args[1], ',')
+    If Args[1] != 'Del' || Args.Length <= 1
+        ExitApp
+    Args.RemoveAt(1)
+    For Dir in Args
+        If DirExist(Dir)
+            DirDelete(Dir, 1)
+    ExitApp()
+}
+
 #Include <ImageButton>
 #Include <IBButtons>
 #Include <ValidGame>
