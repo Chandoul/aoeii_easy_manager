@@ -37,7 +37,7 @@
 	],
 	"GameREG": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Age of Empires II AIO",
 	"Theme": "Default",
-	"Version": "2.6",
+	"Version": "2.7",
 	"RequireVersion": {
 		"aokCombine": {
 			"2.0b": "2.0a"
