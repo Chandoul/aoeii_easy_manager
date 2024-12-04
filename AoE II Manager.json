@@ -136,7 +136,7 @@
 		},
 		"Elemental TD": {
 			"Package": [
-				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/015.7z.001",
+				"https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DB/015.7z.001",
 				"DB\\015.7z.001"
 			],
 			"Description": "by BinaryPotka\nNew 2023 TD mod with Elemental Towers."
