@@ -1,6 +1,8 @@
 #Requires AutoHotkey v2
 #SingleInstance Force
 
+#Include <WatchOut>
+
 If !A_IsAdmin {
     MsgBox('Script must run as administrator!', 'Warn', 0x30)
     ExitApp
@@ -23,6 +25,7 @@ If A_Args.Length {
 #Include <ReadWriteJSON>
 #Include <DownloadPackage>
 #Include <ExtractPackage>
+#Include <WatchFileSize>
 
 BasePackage := ReadSetting(, 'BasePackage')
 DownloadPackages(BasePackage), ExtractPackage(BasePackage[2], 'DB\000',, 1)
@@ -56,27 +59,25 @@ CreateImageButton(U, 0, IBBlue*)
 U.OnEvent('Click', Check4Updates)
 Check4Updates(Ctrl, Info) {
     Try {
-        Ctrl.Enabled := False
-        whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open("GET", Latest[1], True)
-        whr.Send()
-        whr.WaitForResponse()
-        LVersion := JSON.Load(whr.ResponseText)['Version']
-        whr := ''
+        Download(Latest[1], A_Temp '\AoE II Manager.json')
+        LVersion := ReadSetting(A_Temp '\AoE II Manager.json', 'Version', '')
+        If !IsNumber(LVersion) {
+            MsgBox('Unable to check updates!, please make sure you are well connected to the internet before you update.', 'Update check error!', 0x30)
+            Return
+        }
         If LVersion > Version {
             If 'Yes' != MsgBox('New update was found! version = ' LVersion '`nDownload the new update?', 'Update', 0x4 + 0x40) {
-                Ctrl.Enabled := True
                 Return
             }
+            SetTimer(WatchFileSize.Bind(A_Temp '\AoE II Manager AIO.exe', Ctrl), 1000)
             Download(Latest[2], A_Temp '\AoE II Manager AIO.exe')
+            SetTimer(WatchFileSize, 0)
             Run(A_Temp '\AoE II Manager AIO.exe')
             ExitApp()
         }
         MsgBox('You got the latest update!', 'Update', 0x40)
-        Ctrl.Enabled := True
     } Catch {
         MsgBox('Unable to check updates!, please make sure you are well connected to the internet before you update.', 'Update check error!', 0x30)
-        Ctrl.Enabled := True
     }
 }
 

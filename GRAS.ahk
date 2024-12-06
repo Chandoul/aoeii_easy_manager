@@ -1,5 +1,8 @@
 ﻿#Requires AutoHotkey v2
 #SingleInstance Force
+
+#Include <WatchOut>
+
 GR := A_AppData '\GameRanger\GameRanger\GameRanger.exe'
 GRS := A_AppData '\GameRanger\GameRanger Prefs\Settings'
 If !FileExist(GR) {

@@ -1,6 +1,7 @@
 #Requires AutoHotkey v2
 #SingleInstance Force
 
+#Include <WatchOut>
 #Include <ScrollBar>
 #Include <ImageButton>
 #Include <ReadWriteJSON>
@@ -11,6 +12,7 @@
 #Include <GetConnectedState>
 #Include <DMBackup>
 #Include <CloseGame>
+#Include <IBButtons>
 
 GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 DMPackage := ReadSetting(, 'DMPackage')
@@ -78,6 +80,13 @@ For ModName, DataMod in DMPackage {
     CreateImageButton(M, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
     M.OnEvent('Click', UpdateDM)
     Features['DM'].Push(M)
+    M := AoEIIAIO.AddButton('w460', '...')
+    DMList[ModName]['Update'] := 'Update ' ModName
+    DMListH[Index]['Update'] := M
+    M.SetFont('Bold s10')
+    CreateImageButton(M, 0, IBBlue*)
+    M.OnEvent('Click', ClearDM)
+    Features['DM'].Push(M)
 }
 AoEIIAIO.Show('w500 h400')
 If !ValidGameDirectory(GameDirectory) {
@@ -99,6 +108,8 @@ UpdateList() {
         CreateImageButton(DMListH[Index]['Install'], 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
         DMListH[Index]['Uninstall'].Text := '...'
         CreateImageButton(DMListH[Index]['Uninstall'], 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+        DMListH[Index]['Update'].Text := '...'
+        CreateImageButton(DMListH[Index]['Update'], 0, IBBlue*)
     }
     If !Search.Value {
         For Mod, Prop in DMList {
@@ -110,6 +121,8 @@ UpdateList() {
             CreateImageButton(DMListH[Index]['Install'], 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
             DMListH[Index]['Uninstall'].Text := Prop['Uninstall']
             CreateImageButton(DMListH[Index]['Uninstall'], 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+            DMListH[Index]['Update'].Text := Prop['Update']
+            CreateImageButton(DMListH[Index]['Update'], 0, IBBlue*)
         }
         Return
     }
@@ -126,6 +139,8 @@ UpdateList() {
         CreateImageButton(DMListH[Index]['Install'], 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
         DMListH[Index]['Uninstall'].Text := Prop['Uninstall']
         CreateImageButton(DMListH[Index]['Uninstall'], 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+        DMListH[Index]['Update'].Text := Prop['Update']
+        CreateImageButton(DMListH[Index]['Update'], 0, IBBlue*)
     }
 }
 UpdateDM(Ctrl, Info) {
@@ -178,4 +193,13 @@ UpdateDM(Ctrl, Info) {
         MsgBox(DMName ' - should be uninstalled by now!', 'Data mod', 0x40)
     }
     EnableControls(Features['DM'])
+}
+
+ClearDM(Ctrl, Info) {
+    P := InStr(Ctrl.Text, ' ')
+    DMName := SubStr(Ctrl.Text, P + 1)
+    If GetConnectedState()
+        DownloadPackages(DMPackage[DMName]['Package'], 1)
+    If DirExist('tmp\' DMName)
+        DirDelete('tmp\' DMName, 1)
 }

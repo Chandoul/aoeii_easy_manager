@@ -1,6 +1,7 @@
 #Requires AutoHotkey v2
 #SingleInstance Force
 
+#Include <WatchOut>
 #Include <ReadWriteJSON>
 #Include <ImageButton>
 #Include <ValidGame>
