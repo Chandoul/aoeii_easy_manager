@@ -196,10 +196,12 @@ UpdateDM(Ctrl, Info) {
 }
 
 ClearDM(Ctrl, Info) {
+    EnableControls(Features['DM'], 0)
     P := InStr(Ctrl.Text, ' ')
     DMName := SubStr(Ctrl.Text, P + 1)
     If GetConnectedState()
         DownloadPackages(DMPackage[DMName]['Package'], 1)
     If DirExist('tmp\' DMName)
         DirDelete('tmp\' DMName, 1)
+    EnableControls(Features['DM'], 1)
 }
