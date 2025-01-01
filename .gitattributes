@@ -1,3 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 # data/Age[[:space:]]of[[:space:]]Empires[[:space:]]II.7z filter=lfs diff=lfs merge=lfs -text
+Bin/AoE[[:space:]]II[[:space:]]Manager[[:space:]]AIO.exe filter=lfs diff=lfs merge=lfs -text

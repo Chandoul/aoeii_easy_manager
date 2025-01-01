@@ -9,6 +9,7 @@
 #Include <EnableControl>
 #Include <ExtractPackage>
 #Include <DownloadPackage>
+#Include <IBButtons>
 
 GameDirectory := ReadSetting('Setting.json', 'GameLocation')
 DrsMap := ReadSetting(, 'DrsMap')
@@ -18,13 +19,7 @@ AoEIIAIO := Gui(, 'GAME VISUAL MODS')
 AoEIIAIO.BackColor := 'White'
 AoEIIAIO.OnEvent('Close', (*) => ExitApp())
 AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
-AoEIIAIO.SetFont('s10', 'Calibri')
-
-Try DownloadPackages(VMPackage), ExtractPackage(VMPackage[2], 'DB\007',, 1)
-Catch {
-    MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
-    ExitApp()
-}
+AoEIIAIO.SetFont('s10', 'Segoe UI')
 
 Features := Map(), Features['VM'] := []
 VMList := Map()
@@ -48,39 +43,43 @@ Hotkey("End", (*) => AoEIIAIOSB.ScrollMsg(7, 0, GetKeyState("Shift") ? 0x114 : 0
 HotIfWinActive
 AoEIIAIO.AddText('Center w460', 'Search')
 Search := AoEIIAIO.AddEdit('Border Center -E0x200 w460')
-Search.OnEvent('Change', (*) => UpdateModList())
+Search.OnEvent('Change', SearchVM)
 Features['VM'].Push(Search)
-Loop Files, 'DB\007\*', 'D' {
+Loop Files, 'DB\VM\*', 'D' {
     VMList[A_LoopFileName] := Map()
     VMListH[Index := Format('{:03}', A_Index)] := Map()
-    M := AoEIIAIO.AddButton('xm w460 h40 Left', '...')
+    M := AoEIIAIO.AddButton('xm w460 h40 Right yp+80', '...')
     VMList[A_LoopFileName]['Title'] := A_LoopFileName
     VMListH[Index]['Title'] := M
-    M.SetFont('Bold s14')
+    M.SetFont('Bold s12')
     CreateImageButton(M, 0, [[0xFFFFFF], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
     Features['VM'].Push(M)
-    M := AoEIIAIO.AddPicture('Border w150 h113')
-    VMList[A_LoopFileName]['Img'] := 'DB\007\' A_LoopFileName '\img.png'
-    VMListH[Index]['Img'] := M
-    Features['VM'].Push(M)
-    Description := FileExist('DB\007\' A_LoopFileName '\Info.txt') ? FileRead('DB\007\' A_LoopFileName '\Info.txt') : ''
-    VMList[A_LoopFileName]['Description'] := Description
-    M := AoEIIAIO.AddEdit('ReadOnly -E0x200 yp w300 h113 HScroll -HScroll BackgroundWhite', '...')
-    VMList[A_LoopFileName]['Description'] := Description
-    VMListH[Index]['Description'] := M
-    Features['VM'].Push(M)
+
     M := AoEIIAIO.AddButton('xm w460', '...')
     VMList[A_LoopFileName]['Install'] := 'Install ' A_LoopFileName
     VMListH[Index]['Install'] := M
     M.SetFont('Bold s10')
-    CreateImageButton(M, 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+    CreateImageButton(M, 0, IBGreen*)
     M.OnEvent('Click', UpdateVM)
     Features['VM'].Push(M)
-    M := AoEIIAIO.AddButton('w460', '...')
+
+    M := AoEIIAIO.AddPicture('Border xm w150 h113')
+    VMList[A_LoopFileName]['Img'] := 'DB\VM\' A_LoopFileName '\img.png'
+    VMListH[Index]['Img'] := M
+    Features['VM'].Push(M)
+    
+    Description := FileExist('DB\VM\' A_LoopFileName '\Info.txt') ? FileRead('DB\VM\' A_LoopFileName '\Info.txt') : ''
+    VMList[A_LoopFileName]['Description'] := Description
+    M := AoEIIAIO.AddEdit('ReadOnly -E0x200 yp w300 h113 HScroll -HScroll BackgroundWhite', '...')
+    M.SetFont('s8')
+    VMList[A_LoopFileName]['Description'] := Description
+    VMListH[Index]['Description'] := M
+    Features['VM'].Push(M)
+    M := AoEIIAIO.AddButton('xm w460', '...')
     VMList[A_LoopFileName]['Uninstall'] := 'Uninstall ' A_LoopFileName
     VMListH[Index]['Uninstall'] := M
     M.SetFont('Bold s10')
-    CreateImageButton(M, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+    CreateImageButton(M, 0, IBRed*)
     M.OnEvent('Click', UpdateVM)
     Features['VM'].Push(M)
 }
@@ -97,42 +96,59 @@ If !ValidGameDirectory(GameDirectory) {
 UpdateModList()
 ; Updates the list
 UpdateModList() {
-    For Mod, Prop in VMListH {
-        VMListH[Index := Format('{:03}', A_Index)]['Title'].Text := '...'
-        CreateImageButton(VMListH[Index]['Title'], 0, [[0xFFFFFF], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
-        VMListH[Index]['Img'].Value := ''
-        VMListH[Index]['Description'].Value := '...'
-        VMListH[Index]['Install'].Text := '...'
-        CreateImageButton(VMListH[Index]['Install'], 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
-        VMListH[Index]['Uninstall'].Text := '...'
-        CreateImageButton(VMListH[Index]['Uninstall'], 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+    For Mod, Prop in VMList {
+        ResetVMItem(A_Index)
+        VMItemVisible(A_Index)
+        VMItemSet(A_Index, Mod, Prop)
     }
-    If !Search.Value {
-        For Mod, Prop in VMList {
-            VMListH[Index := Format('{:03}', A_Index)]['Title'].Text := Mod
-            CreateImageButton(VMListH[Index]['Title'], 0, [[0xFFFFFF], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
-            VMListH[Index]['Img'].Value := Prop['Img']
-            VMListH[Index]['Description'].Value := Prop['Description']
-            VMListH[Index]['Install'].Text := Prop['Install']
-            CreateImageButton(VMListH[Index]['Install'], 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
-            VMListH[Index]['Uninstall'].Text := Prop['Uninstall']
-            CreateImageButton(VMListH[Index]['Uninstall'], 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
-        }
+}
+ResetVMItem(Index, Value := '...') {
+    Index := Format('{:03}', Index)
+    VMListH[Index]['Title'].Text := Value
+    CreateImageButton(VMListH[Index]['Title'], 0, [[0xFFFFFF], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
+    VMListH[Index]['Img'].Value := ''
+    VMListH[Index]['Description'].Value := Value
+    VMListH[Index]['Install'].Text := Value
+    CreateImageButton(VMListH[Index]['Install'], 0, IBGreen*)
+    VMListH[Index]['Uninstall'].Text := Value
+    CreateImageButton(VMListH[Index]['Uninstall'], 0, IBRed*)
+}
+VMItemVisible(Index, Vis := True) {
+    Index := Format('{:03}', Index)
+    VMListH[Index]['Title'].Visible := Vis
+    VMListH[Index]['Img'].Visible := Vis
+    VMListH[Index]['Description'].Visible := Vis
+    VMListH[Index]['Install'].Visible := Vis
+    VMListH[Index]['Uninstall'].Visible := Vis
+}
+VMItemSet(Index, Mod, Prop) {
+    Index := Format('{:03}', Index)
+    VMListH[Index]['Title'].Text := Mod
+    CreateImageButton(VMListH[Index]['Title'], 0, [[0xFFFFFF], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
+    VMListH[Index]['Img'].Value := Prop['Img']
+    VMListH[Index]['Description'].Value := Prop['Description']
+    VMListH[Index]['Install'].Text := Prop['Install']
+    CreateImageButton(VMListH[Index]['Install'], 0, IBGreen*)
+    VMListH[Index]['Uninstall'].Text := Prop['Uninstall']
+    CreateImageButton(VMListH[Index]['Uninstall'], 0, IBRed*)
+}
+SearchVM(Ctrl, Info) {
+    If !Ctrl.Value {
+        UpdateModList()
         Return
+    }
+    For Prop in VMList {
+        ResetVMItem(A_Index)
+        VMItemVisible(A_Index, 0)
     }
     Index := 0
     For Mod, Prop in VMList {
         If !InStr(Mod, Search.Value) && !InStr(Prop['Description'], Search.Value) {
             Continue
         }
-        VMListH[Index := Format('{:03}', ++Index)]['Title'].Text := Mod
-        CreateImageButton(VMListH[Index]['Title'], 0, [[0xFFFFFF], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
-        VMListH[Index]['Img'].Value := Prop['Img']
-        VMListH[Index]['Description'].Value := Prop['Description']
-        VMListH[Index]['Install'].Text := Prop['Install']
-        CreateImageButton(VMListH[Index]['Install'], 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
-        VMListH[Index]['Uninstall'].Text := Prop['Uninstall']
-        CreateImageButton(VMListH[Index]['Uninstall'], 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+        Index := Format('{:03}', ++Index)
+        VMItemSet(Index, Mod, Prop)
+        VMItemVisible(Index)
     }
 }
 ; Updates a game visual mod
@@ -149,32 +165,32 @@ UpdateVM(Ctrl, Info) {
             If !Default {
                 If Apply {
                     Ctrl.Text := 'Installing... ( ' Progress ' % )'
-                    CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+                    CreateImageButton(Ctrl, 0, IBGreen*)
                     Ctrl.Redraw()
                 } Else {
                     Ctrl.Text := 'Uninstalling... ( ' Progress ' % )'
-                    CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+                    CreateImageButton(Ctrl, 0, IBRed*)
                     Ctrl.Redraw()
                 }
             } Else {
                 If Apply {
                     Ctrl.Text := 'Install ' VMName
-                    CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+                    CreateImageButton(Ctrl, 0, IBGreen*)
                     Ctrl.Redraw()
                 } Else {
                     Ctrl.Text := 'Uninstall ' VMName
-                    CreateImageButton(Ctrl, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF]]*)
+                    CreateImageButton(Ctrl, 0, IBRed*)
                     Ctrl.Redraw()
                 }
             }
         }
         Update(Ctrl, 0)
         ; Update the slp
-        WorkDir := Apply ? 'DB\007\' VMName : 'DB\007\' VMName '\U'
+        WorkDir := Apply ? 'DB\VM\' VMName : 'DB\VM\' VMName '\U'
         If FileExist(WorkDir '\gra*.slp') || FileExist(WorkDir '\int*.slp') || FileExist(WorkDir '\ter*.slp') {
-            RunWait('DB\000\DrsBuild.exe /a "' GameDirectory '\Data\' DrsMap['gra'] '" "' WorkDir '\gra*.slp"',, 'Hide')
-            RunWait('DB\000\DrsBuild.exe /a "' GameDirectory '\Data\' DrsMap['int'] '" "' WorkDir '\int*.slp"',, 'Hide')
-            RunWait('DB\000\DrsBuild.exe /a "' GameDirectory '\Data\' DrsMap['ter'] '" "' WorkDir '\ter*.slp"',, 'Hide')
+            RunWait('DB\Base\DrsBuild.exe /a "' GameDirectory '\Data\' DrsMap['gra'] '" "' WorkDir '\gra*.slp"',, 'Hide')
+            RunWait('DB\Base\DrsBuild.exe /a "' GameDirectory '\Data\' DrsMap['int'] '" "' WorkDir '\int*.slp"',, 'Hide')
+            RunWait('DB\Base\DrsBuild.exe /a "' GameDirectory '\Data\' DrsMap['ter'] '" "' WorkDir '\ter*.slp"',, 'Hide')
         }
         Update(Ctrl, 60)
         ; Update the bina
@@ -183,7 +199,7 @@ UpdateVM(Ctrl, Info) {
             FileN := IniRead(WorkDir '\Info.ini', 'Info', 'File', '')
             Lines := StrSplit(IniRead(WorkDir '\Info.ini', 'Info', 'Line', ''), ',')
             Values := StrSplit(IniRead(WorkDir '\Info.ini', 'Info', 'Value', ''), ',')
-            RunWait('DB\000\DrsBuild.exe /e "' GameDirectory '\Data\' Drs '" ' FileN ' /o "' GameDirectory '\Data"',, 'Hide')
+            RunWait('DB\Base\DrsBuild.exe /e "' GameDirectory '\Data\' Drs '" ' FileN ' /o "' GameDirectory '\Data"',, 'Hide')
             OBJ := FileOpen(GameDirectory '\Data\' FileN, 'r')
             NValues := Map()
             While !OBJ.AtEOF {
@@ -199,11 +215,11 @@ UpdateVM(Ctrl, Info) {
                 OBJ.WriteLine(Line)
             }
             OBJ.Close()
-            RunWait('DB\000\DrsBuild.exe /a "' GameDirectory '\Data\' Drs '" "' GameDirectory '\Data\' FileN '"',, 'Hide')
+            RunWait('DB\Base\DrsBuild.exe /a "' GameDirectory '\Data\' Drs '" "' GameDirectory '\Data\' FileN '"',, 'Hide')
             FileDelete(GameDirectory '\Data\' FileN)
         }
         ; Copy files
-        CopyFolder := Apply ? 'DB\007\' VMName '\Install' : 'DB\007\' VMName '\Uninstall'
+        CopyFolder := Apply ? 'DB\VM\' VMName '\Install' : 'DB\VM\' VMName '\Uninstall'
         If DirExist(CopyFolder) {
             ; Clean existing files
             Loop Files, CopyFolder '\*', 'RFD' {
@@ -223,7 +239,7 @@ UpdateVM(Ctrl, Info) {
         ; Update the external game data slp
         If FileExist(GameDirectory '\Games\age2_x1.xml') {
             If RegExMatch(FileRead(GameDirectory '\Games\age2_x1.xml'), '\Q<path>\E(.*)\Q</path>\E', &DName) {
-                RunWait('DB\000\DrsBuild.exe /a "' GameDirectory '\Games\' DName[1] '\Data\gamedata_x1_p1.drs" "' WorkDir '\*.slp"',, 'Hide')
+                RunWait('DB\Base\DrsBuild.exe /a "' GameDirectory '\Games\' DName[1] '\Data\gamedata_x1_p1.drs" "' WorkDir '\*.slp"',, 'Hide')
             }
         }
         Update(Ctrl, 100)

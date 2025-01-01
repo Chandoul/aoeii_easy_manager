@@ -8,14 +8,15 @@
 GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 Data := []
 
-AoEIIAIO := Gui(, 'RPG Maps')
+AoEIIAIO := Gui(, 'Scenarios')
 AoEIIAIO.BackColor := 'White'
 AoEIIAIO.OnEvent('Close', (*) => ExitApp())
 AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
-AoEIIAIO.SetFont('s10 Bold', 'Calibri')
-ScxList := AoEIIAIO.AddListView('w300 h362 c000080 -Multi', ['Filename'])
+AoEIIAIO.SetFont('s10', 'Segoe UI')
+ScxPath := AoEIIAIO.AddEdit('w300 ReadOnly BackgroundWhite')
+ScxList := AoEIIAIO.AddListView('xp yp+30 w300 h332 c000080 -Multi', ['Filename'])
 ScxList.OnEvent('Click', StrutureParse)
-Titles := AoEIIAIO.AddListView('yp w200 h362 c0000FF -Multi', ['Extracted Info'])
+Titles := AoEIIAIO.AddListView('xp+310 ym w200 h362 c0000FF -Multi', ['Extracted Info'])
 Titles.OnEvent('Click', ShowInfo)
 InfoStr := AoEIIAIO.AddEdit('yp w500 ReadOnly cRed Center BackgroundWhite')
 AoEIIAIO.SetFont('norm s10')
@@ -30,8 +31,10 @@ If !ValidGameDirectory(GameDirectory) {
     ExitApp()
 }
 Files := []
-Loop Files, GameDirectory '\*.scx', 'R'
-    ScxList.Add(, A_LoopFileName), Files.Push(A_LoopFileFullPath)
+Loop Files, GameDirectory '\*.scx', 'R' {
+    ScxList.Add(, A_LoopFileName)
+    Files.Push(A_LoopFileFullPath)
+}
 ShowInfo(Ctrl, Item) {
     InfoStr.Value := Data[Item][1]
     ValueStr.Value := Data[Item][2]
@@ -40,6 +43,7 @@ StrutureParse(Ctrl, Item) {
     Global Data
     Name := Ctrl.GetText(Item)
     File := Files[Item]
+    ScxPath.Value := File
     Obj := FileOpen(File, 'r')
 
     Data := []

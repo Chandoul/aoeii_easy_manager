@@ -6,11 +6,18 @@ DownloadPackage(Link, Package, Clean := 0) {
         DirCreate(OutDir)
     If !FileExist(Package)
         Download(Link, Package)
+    Buff := FileRead(Package, 'RAW m2')
+    Hdr := StrGet(Buff,, 'CP0')
+    If Hdr != '7z'
+        Return False
+    Return True
 }
 DownloadPackages(Packages, Clean := 0) {
     For Link in Packages {
         If !InStr(Link, 'https://')
             Continue
-        DownloadPackage(Link, Packages[A_Index + 1], Clean)
+        If !DownloadPackage(Link, Packages[A_Index + 1], Clean)
+            Return False
     }
+    Return True
 }

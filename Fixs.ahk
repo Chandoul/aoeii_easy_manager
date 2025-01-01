@@ -5,38 +5,35 @@
 #Include <ReadWriteJSON>
 #Include <ImageButton>
 #Include <ValidGame>
-#Include <CloseGame>
+#Include <LockCheck>
 #Include <DefaultPB>
 #Include <EnableControl>
 #Include <HashFile>
 #Include <DownloadPackage>
 #Include <ExtractPackage>
+#Include <IBButtons>
+#Include <VersionExist>
 
 AoEIIAIO := Gui(, 'GAME FIXS')
 AoEIIAIO.BackColor := 'White'
 AoEIIAIO.OnEvent('Close', (*) => ExitApp())
 AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
-AoEIIAIO.SetFont('s10', 'Calibri')
+AoEIIAIO.SetFont('s10', 'Segoe UI')
 
 GameFix := ReadSetting(, 'GameFix')
 RegKey := ReadSetting(, 'GameFixREG')
 RegName := ReadSetting(, 'GameFixREGName')
 FixPackage := ReadSetting(, 'FixPackage')
 
-Try DownloadPackage(FixPackage[1], FixPackage[2]), ExtractPackage(FixPackage[2], 'DB\001',, 1)
-Catch {
-    MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
-    ExitApp()
-}
-
 Features := Map(), Features['Fixs'] := []
 
 H := AoEIIAIO.AddText('w350 Center h25', 'Select one of the fixes below')
-H.SetFont('Bold s12')
+H.SetFont('Bold')
+AoEIIAIO.SetFont('s9')
 For Each, FIX in GameFix['FIX'] {
     H := AoEIIAIO.AddButton('w350', FIX)
     H.SetFont('Bold')
-    CreateImageButton(H, 0, [[0xFFFFFF, 0,, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
+    CreateImageButton(H, 0, IBBlack*)
     Features['Fixs'].Push(H)
     H.OnEvent('Click', ApplyFix)
     GameFix['FIXHandle'][FIX] := H
@@ -49,10 +46,10 @@ H := AoEIIAIO.AddLink('w350', 'Help Links:`n<a href="https://www.moddb.com/games
 H.SetFont('Bold')
 AoEIIAIO.AddText('ym w300 Center', 'General options:').SetFont('Bold')
 GeneralOptions := AoEIIAIO.AddListView('r4 -Hdr Checked -E0x200 wp', [' ', ' '])
-For Option in StrSplit(IniRead('DB\001\general.ini', 'General',, ''), '`n') {
+For Option in StrSplit(IniRead('DB\Fix\general.ini', 'General',, ''), '`n') {
 	OptionValue := StrSplit(Option, '=')
 	CurrentValue := RegRead(RegKey, RegName, 0)
-	GeneralOptions.Add(CurrentValue = OptionValue[2] ? 'Check' : '', IniRead('DB\001\general.ini', 'Description', OptionValue[1], ''), OptionValue[1])
+	GeneralOptions.Add(CurrentValue = OptionValue[2] ? 'Check' : '', IniRead('DB\Fix\general.ini', 'Description', OptionValue[1], ''), OptionValue[1])
 	GeneralOptions.ModifyCol(1, 'AutoHdr')
 }
 GeneralOptions.ModifyCol(2, '0')
@@ -71,7 +68,7 @@ UpdateAoe2PatchWA(Ctrl, Info) {
 }
 AoEIIAIO.AddText('xp-4 yp+30 w300 Center', 'Window mod options:').SetFont('Bold')
 AdvanceOptions := AoEIIAIO.AddListView('r6 -Hdr Checked -E0x200 wp', [' '])
-For Option in StrSplit(IniRead('DB\001\wndmode.ini', 'WINDOWMODE',, ''), '`n') {
+For Option in StrSplit(IniRead('DB\Fix\wndmode.ini', 'WINDOWMODE',, ''), '`n') {
 	OptionValue := StrSplit(Option, '=')
 	AdvanceOptions.Add(OptionValue[2] ? 'Check' : '', OptionValue[1])
 	AdvanceOptions.ModifyCol(1, 'AutoHdr')
@@ -79,7 +76,7 @@ For Option in StrSplit(IniRead('DB\001\wndmode.ini', 'WINDOWMODE',, ''), '`n') {
 AdvanceOptions.OnEvent('ItemCheck', UpdateWndMod)
 UpdateWndMod(Ctrl, Item, Checked) {
 	CurrentKey := AdvanceOptions.GetText(Item)
-	IniWrite(Checked, 'DB\001\wndmode.ini', 'WINDOWMODE', CurrentKey)
+	IniWrite(Checked, 'DB\Fix\wndmode.ini', 'WINDOWMODE', CurrentKey)
 	Configs := [GameDirectory '\wndmode.ini', GameDirectory '\age2_x1\wndmode.ini']
 	For Config in Configs {
 		If !FileExist(Config) {
@@ -103,29 +100,50 @@ AnalyzeFix()
 ; Applys fixes
 ApplyFix(Ctrl, Info) {
     Try {
-        CloseGame()
-        CleansUp()
-        DefaultPB(Features['Fixs'])
-        EnableControls(Features['Fixs'], 0)
-        DirCopy('DB\001\' Ctrl.Text, GameDirectory, 1)
-        If Ctrl.Text ~= 'v3|v4' {
-            RegWrite('RUNASADMIN WINXPSP3', 'REG_SZ', RegKey, GameDirectory '\empires2.exe')
-            RegWrite('RUNASADMIN WINXPSP3', 'REG_SZ', RegKey, GameDirectory '\age2_x1\age2_x1.exe')
+        If Ctrl.Text = 'None' {
+            EnableControls(Features['Fixs'], 0)
+            DefaultPB(Features['Fixs'], IBBlack)
+            CleansUp()
+            AnalyzeFix()
+            EnableControls(Features['Fixs'])
+            SoundPlay('DB\Base\30 Wololo.mp3')
+            Return
         }
+        If VersionExist('aoc', '1.0e', GameDirectory)
+        || VersionExist('aoc', '1.1', GameDirectory) {
+            Msgbox('Sorry to inform you that ' Ctrl.Text ' does not apply on the current version your game is running! (1.0e, 1.5)', 'Incompatible!', 0x30)
+            Return
+        }
+        If VersionExist('aoc', '1.5', GameDirectory) && Ctrl.Text ~= 'v5'{
+            Msgbox('Sorry to inform you that Fix v5 does not apply on the current version your game is running! (1.5)', 'Incompatible!', 0x30)
+            Return
+        }
+        EnableControls(Features['Fixs'], 0)
+        DefaultPB(Features['Fixs'], IBBlack)
+        CleansUp()
+        DirCopy('DB\Fix\' Ctrl.Text, GameDirectory, 1)
+        ;If Ctrl.Text ~= 'v3|v4' {
+        ;    RegWrite('RUNASADMIN WINXPSP3', 'REG_SZ', RegKey, GameDirectory '\empires2.exe')
+        ;    RegWrite('RUNASADMIN WINXPSP3', 'REG_SZ', RegKey, GameDirectory '\age2_x1\age2_x1.exe')
+        ;}
         EnableControls(Features['Fixs'])
         AnalyzeFix()
-        SoundPlay('DB\000\30 Wololo.mp3')
-    } Catch Error As Err {
-        MsgBox("Patch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Fix', 0x10)
+        SoundPlay('DB\Base\30 Wololo.mp3')
+    } Catch {
+        If !LockCheck(GameDirectory) {
+            EnableControls(Features['Fixs'])
+            Return
+        }
+        ApplyFix(Ctrl, Info)
     }
 }
 AnalyzeFix() {
     MatchFix := ''
-    Loop Files, 'DB\001\*', 'D' {
+    Loop Files, 'DB\Fix\*', 'D' {
         Fix := A_LoopFileName
         Match := True
-        Loop Files, 'DB\001\' Fix '\*.*', 'R' {
-            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\001\' Fix '\')
+        Loop Files, 'DB\Fix\' Fix '\*.*', 'R' {
+            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\Fix\' Fix '\')
             If !FileExist(GameDirectory '\' PathFile) && Match {
                 Match := False
                 Break
@@ -142,16 +160,16 @@ AnalyzeFix() {
         }
     }
     If MatchFix {
-        CreateImageButton(GameFix['FIXHandle'][MatchFix], 0, [[0x008000,, 0xFFFFFF, 4, 0x008000, 2],,, [0xFFFFFF,, 0xCCCCCC]]*)
+        CreateImageButton(GameFix['FIXHandle'][MatchFix], 0, IBGreen1*)
         GameFix['FIXHandle'][MatchFix].Redraw()
     }
 }
 ; Cleans up
 CleansUp() {
-    Loop Files, 'DB\001\*', 'D' {
+    Loop Files, 'DB\Fix\*', 'D' {
         Fix := A_LoopFileName
-        Loop Files, 'DB\001\' Fix '\*.*', 'R' {
-            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\001\' Fix '\')
+        Loop Files, 'DB\Fix\' Fix '\*.*', 'R' {
+            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\Fix\' Fix '\')
             If FileExist(GameDirectory '\' PathFile) {
                 FileDelete(GameDirectory '\' PathFile)
             }

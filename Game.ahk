@@ -22,27 +22,27 @@ AoEIIAIO := Gui(, 'GAME LOCATION')
 AoEIIAIO.BackColor := 'White'
 AoEIIAIO.OnEvent('Close', (*) => ExitApp())
 AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
-AoEIIAIO.SetFont('s10 Bold', 'Calibri')
+AoEIIAIO.SetFont('s9 Bold', 'Segoe UI')
 
 Select := AoEIIAIO.AddButton('xm w200 h27', 'Select')
 Select.OnEvent('Click', SelectDirectory)
-CreateImageButton(Select, 0, [['DB\000\pick_folder_normal.png'], ['DB\000\pick_folder_hover.png'], ['DB\000\pick_folder_click.png'], ['DB\000\pick_folder_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(Select, 0, [['DB\Base\pick_folder_normal.png'], ['DB\Base\pick_folder_hover.png'], ['DB\Base\pick_folder_click.png'], ['DB\Base\pick_folder_disable.png',, 0xCCCCCC]]*)
 H := AoEIIAIO.AddButton('w200 yp', 'Open the selected')
 H.OnEvent('Click', (*) => GameDirectory.Value ? Run(GameDirectory.Value '\') : 0)
-CreateImageButton(H, 0, [['DB\000\open_aoeii_normal.png'], ['DB\000\open_aoeii_hover.png'], ['DB\000\open_aoeii_click.png'], ['DB\000\open_aoeii_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(H, 0, [['DB\Base\open_aoeii_normal.png'], ['DB\Base\open_aoeii_hover.png'], ['DB\Base\open_aoeii_click.png'], ['DB\Base\open_aoeii_disable.png',, 0xCCCCCC]]*)
 GameDirectory := AoEIIAIO.AddEdit('cRed xm ReadOnly w410 -E0x200 Border BackgroundWhite Center')
 SelectGR := AoEIIAIO.AddButton('xm w200', 'Select from GameRanger')
-CreateImageButton(SelectGR, 0, [['DB\000\gr_get_normal.png'], ['DB\000\gr_get_hover.png'], ['DB\000\gr_get_click.png'], ['DB\000\gr_get_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(SelectGR, 0, [['DB\Base\gr_get_normal.png'], ['DB\Base\gr_get_hover.png'], ['DB\Base\gr_get_click.png'], ['DB\Base\gr_get_disable.png',, 0xCCCCCC]]*)
 SelectGR.OnEvent('Click', SelectDirectoryGR)
-H := AoEIIAIO.AddButton('w200 yp', 'Set into GameRanger')
-CreateImageButton(H, 0, [['DB\000\gr_get_normal.png'], ['DB\000\gr_get_hover.png'], ['DB\000\gr_get_click.png'], ['DB\000\gr_get_disable.png',, 0xCCCCCC]]*)
+H := AoEIIAIO.AddButton('w200 yp Disabled', 'Set into GameRanger')
+CreateImageButton(H, 0, [['DB\Base\gr_get_normal.png'], ['DB\Base\gr_get_hover.png'], ['DB\Base\gr_get_click.png'], ['DB\Base\gr_get_disable.png',, 0xCCCCCC]]*)
 H.OnEvent('Click', SetDirectoryGR)
 H := AoEIIAIO.AddButton('xm w410', 'Download the game')
 H.OnEvent('Click', DownloadGame)
-CreateImageButton(H, 0, [['DB\000\download_aoeii_normal.png'], ['DB\000\download_aoeii_hover.png'], ['DB\000\download_aoeii_click.png'], ['DB\000\download_aoeii_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(H, 0, [['DB\Base\download_aoeii_normal.png'], ['DB\Base\download_aoeii_hover.png'], ['DB\Base\download_aoeii_click.png'], ['DB\Base\download_aoeii_disable.png',, 0xCCCCCC]]*)
 H := AoEIIAIO.AddButton('xm w410', 'Delete the game')
 H.OnEvent('Click', DeleteGame)
-CreateImageButton(H, 0, [['DB\000\delete_aoeii_normal.png',, 0xFF0000], ['DB\000\delete_aoeii_hover.png',, 0xFF0000], ['DB\000\delete_aoeii_click.png',, 0xFF0000], ['DB\000\delete_aoeii_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(H, 0, [['DB\Base\delete_aoeii_normal.png',, 0xFF0000], ['DB\Base\delete_aoeii_hover.png',, 0xFF0000], ['DB\Base\delete_aoeii_click.png',, 0xFF0000], ['DB\Base\delete_aoeii_disable.png',, 0xCCCCCC]]*)
 DeskShort := AoEIIAIO.AddCheckbox(, 'Notify to add the game desktop shortcuts')
 DeskShort.OnEvent('Click', GameShortcuts)
 PBT := AoEIIAIO.AddText('Center w410 Hidden cBlue')
@@ -148,6 +148,7 @@ WriteNewLocation(Location) {
     WriteSetting('Setting.json', 'GameLocation', Location)
     GameLocationHistory[Location] := A_Now
     WriteSetting('Setting.json', 'GameLocationHistory', GameLocationHistory)
+    Run('AoE II Manager AIO.ahk')
 }
 
 SelectDirectoryGR(Ctrl, Info) {
@@ -355,7 +356,7 @@ AddGameShortcuts() {
             }
         }
         If CreateShortcut {
-            If 'Yes' = MsgBox('Want to create the game desktop shortcuts?', 'Game', 0x4 + 0x40) {
+            If 'Yes' = MsgBox('Want to create the game desktop shortcuts?', 'Game', 0x4 + 0x40 ' T5') {
                 FileCreateShortcut(GameDirectory '\empires2.exe', A_Desktop '\The Age of Kings.lnk', GameDirectory)
                 FileCreateShortcut(GameDirectory '\age2_x1\age2_x1.exe', A_Desktop '\The Conquerors.lnk', GameDirectory '\age2_x1')
                 FileCreateShortcut(GameDirectory '\age2_x1\age2_x2.exe', A_Desktop '\Forgotten Empires.lnk', GameDirectory '\age2_x1')

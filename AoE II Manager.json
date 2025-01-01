@@ -1,4 +1,6 @@
 {
+	"Theme": "Default",
+	"Version": "3.0",
 	"Latest": [
 		"https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/AoE%20II%20Manager.json",
 		"https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/Bin/AoE%20II%20Manager%20AIO.exe"
@@ -6,10 +8,6 @@
 	"AppName": "Age of Empires II Easy Manager",
 	"Author": "Smile@GR",
 	"AutoUpdate": 0,
-	"BasePackage": [
-		"https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DB/000.7z",
-		"DB\\000.7z"
-	],
 	"GRApp": "\\GameRanger\\GameRanger\\GameRanger.exe",
 	"GRSetting": "\\GameRanger\\GameRanger Prefs\\Settings",
 	"Game": [
@@ -36,8 +34,6 @@
 		"DB\\002.7z.001"
 	],
 	"GameREG": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Age of Empires II AIO",
-	"Theme": "Default",
-	"Version": "2.9",
 	"RequireVersion": {
 		"aokCombine": {
 			"2.0b": "2.0a"
@@ -46,43 +42,49 @@
 			"1.0e": "1.0c",
 			"1.1": "1.0c",
 			"1.5": "1.0c"
+		},
+		"VerCode": {
+			"2.0": 1,
+			"2.0a": 2,
+			"2.0b": 3,
+			"1.0": 4,
+			"1.0c": 5,
+			"1.0e": 6,
+			"1.1": 7,
+			"1.5": 8,
+			"2.2": 9
 		}
 	},
 	"GameFix": {
 		"FIX": [
+			"None",
 			"Fix v1",
 			"Fix v2",
 			"Fix v3",
 			"Fix v4",
 			"Fix v5"
 		],
+		"FIXCode": {
+			"None": -1,
+			"Fix v1": 1,
+			"Fix v2": 2,
+			"Fix v3": 3,
+			"Fix v4": 4,
+			"Fix v5": 5
+		},
 		"FIXHandle": {}
 	},
 	"GameFixREG": "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Microsoft Games\\Age of Empires",
 	"GameFixREGName": "Aoe2Patch",
-	"FixPackage": [
-		"https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DB/001.7z",
-		"DB\\001.7z"
-	],
-	"LngPackage": [
-		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/006.7z.001",
-		"DB\\006.7z.001"
-	],
 	"DrsMap": {
 		"gra": "graphics.drs",
 		"int": "interfac.drs",
 		"ter": "terrain.drs"
 	},
-	"VMPackage": [
-		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/007.7z.001",
-		"DB\\007.7z.001",
-		"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/007.7z.002",
-		"DB\\007.7z.002"
-	],
 	"DMPackage": {
 		"Allied Vision": {
 			"Package": [
-				"https://raw.githubusercontent.com/SmileAoE/aoeii_aio/main/DB/013.7z.001",
+				"https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/DB/013.7z.001",
 				"DB\\013.7z.001"
 			],
 			"Description": "by Justin\nGives free cartography at start of game."

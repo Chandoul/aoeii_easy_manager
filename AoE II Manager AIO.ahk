@@ -8,17 +8,6 @@ If !A_IsAdmin {
     ExitApp
 }
 
-If A_Args.Length {
-    Args := StrSplit(A_Args[1], ',')
-    If Args[1] != 'Del' || Args.Length <= 1
-        ExitApp
-    Args.RemoveAt(1)
-    For Dir in Args
-        If DirExist(Dir)
-            DirDelete(Dir, 1)
-    ExitApp()
-}
-
 #Include <ImageButton>
 #Include <IBButtons>
 #Include <ValidGame>
@@ -26,9 +15,6 @@ If A_Args.Length {
 #Include <DownloadPackage>
 #Include <ExtractPackage>
 #Include <WatchFileSize>
-
-BasePackage := ReadSetting(, 'BasePackage')
-DownloadPackages(BasePackage), ExtractPackage(BasePackage[2], 'DB\000',, 1)
 
 Features := Map()
 Features['Main'] := []
@@ -42,10 +28,14 @@ AoEIIAIO.OnEvent('Close', (*) => ExitApp())
 AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
 AoEIIAIO.SetFont('s10', 'Segoe UI')
 
+;AoEIIAIO.AddPicture('x0 y0', 'DB\Base\Back.png')
+
+CreateImageButton("SetDefGuiColor", '0x030303')
+
 WD := AoEIIAIO.AddButton('x0 y0', '...')
-AoEIIAIO.SetFont('Bold s15')
-T := AoEIIAIO.AddText('xm cGreen Center', AppName ' v' Version)
-P := AoEIIAIO.AddPicture('xm+90', 'DB\000\game.png')
+AoEIIAIO.SetFont('Bold s18')
+T := AoEIIAIO.AddText('xm cGreen Center BackgroundTrans y40', AppName ' v' Version)
+P := AoEIIAIO.AddPicture('xm+90 y80', 'DB\Base\game.png')
 AoEIIAIO.SetFont('Bold s12')
 
 R := AoEIIAIO.AddButton('xm ym+30 w100', 'Reload')
@@ -82,7 +72,7 @@ Check4Updates(Ctrl, Info) {
 }
 
 AoEIIAIO.SetFont('Bold s10')
-H := AoEIIAIO.AddButton('xm w150', 'My Game')
+H := AoEIIAIO.AddButton('xm y310 w150', 'My Game')
 CreateImageButton(H, 0, IBBlack*)
 H.OnEvent('Click', LaunchGame)
 LaunchGame(Ctrl, Info) {
@@ -146,7 +136,7 @@ LaunchDM(Ctrl, Info) {
 
 }
 
-H := AoEIIAIO.AddButton('xm wp', 'Hide All IP')
+H := AoEIIAIO.AddButton('xm y350 wp', 'Hide All IP')
 CreateImageButton(H, 0, IBBlack*)
 H.OnEvent('Click', LaunchVPN)
 Features['Main'].Push(H)
@@ -190,19 +180,17 @@ LaunchGRAS(Ctrl, Info) {
 
 }
 
-H := AoEIIAIO.AddButton('yp w150', 'RPG Maps')
+H := AoEIIAIO.AddButton('yp w150', 'Scenarios')
 CreateImageButton(H, 0, IBBlack*)
 H.OnEvent('Click', LaunchRPG)
 Features['Main'].Push(H)
 LaunchRPG(Ctrl, Info) {
-    Try Run('RPG.ahk')
+    Try Run('Scx.ahk')
     Catch Error As Err
         MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'DirectDraw', 0x10)
 
 }
-
 AoEIIAIO.Show()
-
 R.Redraw()
 AoEIIAIO.GetPos(,, &W, &H)
 R.GetPos(, &Y)
@@ -211,7 +199,8 @@ U.Move(W - WU - 25, Y)
 U.Redraw()
 T.Move(0,, W)
 T.Redraw()
-P.Move((W - 373) / 2)
+P.Move((W - 510) / 2)
+P.Redraw()
 WD.Move(,, W - 16)
 WD.SetFont('Bold s10', 'Segoe UI')
 CreateImageButton(WD, 0, IBGray*)
@@ -224,7 +213,7 @@ OpenGameFolder() {
 }
 GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 If !ValidGameDirectory(GameDirectory) {
-    P.Value := 'DB\000\gameoff.png'
+    P.Value := 'DB\Base\gameoff.png'
     For Each, Version in Features['Main'] {
         Switch Version.Text {
             Case "Hide All IP"

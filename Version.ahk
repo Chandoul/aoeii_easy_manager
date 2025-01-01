@@ -5,21 +5,16 @@
 #Include <ImageButton>
 #Include <ReadWriteJSON>
 #Include <ValidGame>
-#Include <CloseGame>
+#Include <LockCheck>
 #Include <HashFile>
 #Include <DownloadPackage>
 #Include <ExtractPackage>
-#Include <Prepare>
+#Include <IBButtons>
+#Include <FixExist>
 
 GameVersion := ReadSetting(, 'RequireVersion')
 GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 VersionPackage := ReadSetting(, 'VersionPackage')
-
-Try DownloadPackage(VersionPackage[1], VersionPackage[2]), ExtractPackage(VersionPackage[2], 'DB\002',, 1)
-Catch {
-    MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
-    ExitApp()
-}
 
 AoEIIAIO := Gui(, 'GAME VERSION')
 AoEIIAIO.BackColor := 'White'
@@ -29,15 +24,15 @@ AoEIIAIO.SetFont('s10 Bold', 'Calibri')
 
 H := AoEIIAIO.AddText('cRed w150 Center h30', 'The Age of Kings')
 H.SetFont('Bold s12')
-H := AoEIIAIO.AddPicture('xp+59 yp+30', 'DB\000\aok.png')
+H := AoEIIAIO.AddPicture('xp+59 yp+30', 'DB\Base\aok.png')
 H.OnEvent('Click', LaunchGame)
 AoEIIAIO.AddText('xp-59 yp+35 w1 h1')
 Features := Map(), Features['Version'] := []
 GameVersion['aok'] := Map()
-Loop Files, 'DB\002\aok\*', 'D' {
+Loop Files, 'DB\Version\aok\*', 'D' {
     H := AoEIIAIO.AddButton('w150', AOK := A_LoopFileName)
     H.SetFont('Bold')
-    CreateImageButton(H, 0, [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
+    CreateImageButton(H, 0, IBRed*)
     H.OnEvent('Click', ApplyVersion)
     GameVersion['aok'][H] := 1
     Features['Version'].Push(H)
@@ -45,14 +40,14 @@ Loop Files, 'DB\002\aok\*', 'D' {
 
 H := AoEIIAIO.AddText('cBlue ym w150 Center h30', 'The Conquerors')
 H.SetFont('Bold s12')
-H := AoEIIAIO.AddPicture('xp+59 yp+30', 'DB\000\aoc.png')
+H := AoEIIAIO.AddPicture('xp+59 yp+30', 'DB\Base\aoc.png')
 H.OnEvent('Click', LaunchGame)
 AoEIIAIO.AddText('xp-59 yp+35 w1 h1')
 GameVersion['aoc'] := Map()
-Loop Files, 'DB\002\aoc\*', 'D' {
+Loop Files, 'DB\Version\aoc\*', 'D' {
     H := AoEIIAIO.AddButton('w150', AOC := A_LoopFileName)
     H.SetFont('Bold')
-    CreateImageButton(H, 0, [[0xFFFFFF,, 0x0000FF, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
+    CreateImageButton(H, 0, IBBlue1*)
     H.OnEvent('Click', ApplyVersion)
     GameVersion['aoc'][H] := 2
     Features['Version'].Push(H)
@@ -60,14 +55,14 @@ Loop Files, 'DB\002\aoc\*', 'D' {
 
 H := AoEIIAIO.AddText('cGreen ym w150 Center h30', 'Forgotten Empires')
 H.SetFont('Bold s12')
-H := AoEIIAIO.AddPicture('xp+59 yp+30', 'DB\000\fe.png')
+H := AoEIIAIO.AddPicture('xp+59 yp+30', 'DB\Base\fe.png')
 H.OnEvent('Click', LaunchGame)
 AoEIIAIO.AddText('xp-59 yp+35 w1 h1')
 GameVersion['fe'] := Map()
-Loop Files, 'DB\002\fe\*', 'D' {
+Loop Files, 'DB\Version\fe\*', 'D' {
     H := AoEIIAIO.AddButton('w150', FE := A_LoopFileName)
     H.SetFont('Bold')
-    CreateImageButton(H, 0, [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
+    CreateImageButton(H, 0, IBGreen*)
     H.OnEvent('Click', ApplyVersion)
     GameVersion['fe'][H] := 3
     Features['Version'].Push(H)
@@ -98,10 +93,10 @@ FindGame(Ctrl) {
 }
 
 CleansUp(FGame) {
-    Loop Files, 'DB\002\' FGame '\*', 'D' {
+    Loop Files, 'DB\Version\' FGame '\*', 'D' {
         Version := A_LoopFileName
-        Loop Files, 'DB\002\' FGame '\' Version '\*.*', 'R' {
-            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\002\' FGame '\' Version '\')
+        Loop Files, 'DB\Version\' FGame '\' Version '\*.*', 'R' {
+            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\Version\' FGame '\' Version '\')
             If FileExist(GameDirectory '\' PathFile) {
                 FileDelete(GameDirectory '\' PathFile)
             }
@@ -112,30 +107,43 @@ CleansUp(FGame) {
 ApplyReqVersion(Ctrl, FGame) {
     If GameVersion.Has(FGame 'Combine') 
     && GameVersion[FGame 'Combine'].Has(Ctrl.Text) {
-        If DirExist('DB\002\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text]) {
-            DirCopy('DB\002\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text], GameDirectory, 1)
+        If DirExist('DB\Version\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text]) {
+            DirCopy('DB\Version\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text], GameDirectory, 1)
         }
     }
-    If DirExist('DB\002\' FGame '\' Ctrl.Text) {
-        DirCopy('DB\002\' FGame '\' Ctrl.Text, GameDirectory, 1)
+    If DirExist('DB\Version\' FGame '\' Ctrl.Text) {
+        DirCopy('DB\Version\' FGame '\' Ctrl.Text, GameDirectory, 1)
     }
 }
 ApplyVersion(Ctrl, Info) {
+    If FixExist('Fix v5', GameDirectory) && Ctrl.Text ~= '1\.5' {
+        Msgbox('Sorry to inform you that ' Ctrl.Text ' is not compatible with the fix (Fix v5)', 'Incompatible!', 0x30)
+        Return
+    }
+    If FixExist('Fix v1', GameDirectory)
+    || FixExist('Fix v2', GameDirectory)
+    || FixExist('Fix v3', GameDirectory)
+    || FixExist('Fix v4', GameDirectory)
+    || FixExist('Fix v5', GameDirectory) {
+        If Ctrl.Text ~= '1\.0e|1\.1' {
+            Msgbox('Sorry to inform you that ' Ctrl.Text ' is not compatible with the fixs (Fix v1, v2, v3, v4, v5)', 'Incompatible!', 0x30)
+            Return
+        }
+    }
     Try {
         DisableOptions(FGame := FindGame(Ctrl))
-        CloseGame()
         CleansUp(FGame)
         ApplyReqVersion(Ctrl, FGame)
         AnalyzeVersion()
-        SoundPlay('DB\000\30 Wololo.mp3')
-    } Catch Error As Err {
-        MsgBox("Version set failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File
-             . '`n`nPossible reason:'
-             . '`nGame folder [ ' GameDirectory ' ] is locked by another process'
-             . '`n`nFamous applications that can be the cause:'
-             . '`nGameRanger.exe`nAdvancedGenieEditor3.exe`nTurtle Pack.exe'
-             . '`n`nTerminating or restarting them may solve the issue', 'Version', 0x10)
-        EnableOptions(FGame := FindGame(Ctrl))
+        SoundPlay('DB\Base\30 Wololo.mp3')
+        EnableOptions(FGame)
+    } Catch {
+        If !LockCheck(GameDirectory) {
+            EnableOptions(FGame)
+            AnalyzeVersion()
+            Return
+        }
+        ApplyVersion(Ctrl, Info)
     }
 }
 ; Enables a versions list
@@ -147,9 +155,9 @@ EnableOptions(Game) {
 ; Disables a versions list
 DisableOptions(Game) {
     Switch Game {
-        Case 'aok' : IB := [[0xFFFFFF,, 0xFF0000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]
-        Case 'aoc' : IB := [[0xFFFFFF,, 0x0000FF, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]
-        Case 'fe' : IB := [[0xFFFFFF,, 0x008000, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]
+        Case 'aok' : IB := IBRed
+        Case 'aoc' : IB := IBBlue1
+        Case 'fe' : IB := IBGreen
     }
     For Item in GameVersion[Game] {
         Item.Enabled := False
@@ -159,11 +167,11 @@ DisableOptions(Game) {
 ; Return a game version based on the available versions
 AppliedVersionLookUp(Location) {
     MatchVersion := ''
-    Loop Files, 'DB\002\' Location '\*', 'D' {
+    Loop Files, 'DB\Version\' Location '\*', 'D' {
         Version := A_LoopFileName
         Match := True
-        Loop Files, 'DB\002\' Location '\' Version '\*.*', 'R' {
-            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\002\' Location '\' Version '\')
+        Loop Files, 'DB\Version\' Location '\' Version '\*.*', 'R' {
+            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\Version\' Location '\' Version '\')
             If !FileExist(GameDirectory '\' PathFile) && Match {
                 Match := False
                 Break
@@ -196,7 +204,7 @@ AnalyzeVersion() {
             For Game, Version in GameVersion['aok'] {
                 Game.Enabled := True
             }
-            CreateImageButton(Version[2], 0, [[0xFF5151,, 0xFFFFFF, 4, 0xFF5151, 2],,, [0xFFFFFF,, 0xCCCCCC,, 0xCCCCCC]]*)
+            CreateImageButton(Version[2], 0, IBRed1*)
         }
     }
     If FileExist(GameDirectory '\age2_x1\age2_x1.exe') {
@@ -205,7 +213,7 @@ AnalyzeVersion() {
             For Game, Version in GameVersion['aoc'] {
                 Game.Enabled := True
             }
-            CreateImageButton(Version[2], 0, [[0x0080FF,, 0xFFFFFF, 4, 0x0080FF, 2],,, [0xFFFFFF,, 0xCCCCCC,, 0xCCCCCC]]*)
+            CreateImageButton(Version[2], 0, IBBlue2*)
         }
     }
     If FileExist(GameDirectory '\age2_x1\age2_x2.exe') {
@@ -214,7 +222,7 @@ AnalyzeVersion() {
             For Game, Version in GameVersion['fe'] {
                 Game.Enabled := True
             }
-            CreateImageButton(Version[2], 0, [[0x00A800,, 0xFFFFFF, 4, 0x00A800, 2],,, [0xFFFFFF,, 0xCCCCCC,, 0xCCCCCC]]*)
+            CreateImageButton(Version[2], 0, IBGreen1*)
         }
     }
 }

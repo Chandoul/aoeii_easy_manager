@@ -6,9 +6,9 @@ DMBackup(GameDirectory, ModBackup := 'tmp\Backup', ModeName := '', Flag := 0) {
                     DirCopy(ModBackup, GameDirectory, 1), DirDelete(ModBackup, 1)
             }
         Case 1:
-        If DirExist(ModBackup) {
-            DirCopy(ModBackup, GameDirectory, 1), DirDelete(ModBackup, 1)
-        }
+            If DirExist(ModBackup) {
+                DirCopy(ModBackup, GameDirectory, 1), DirDelete(ModBackup, 1)
+            }
         Case 2:
             If !DirExist(ModBackup)
                 DirCreate(ModBackup)

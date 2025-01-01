@@ -8,9 +8,11 @@
 #Include <HashFile>
 #Include <DefaultPB>
 #Include <EnableControl>
-#Include <CloseGame>
+#Include <LockCheck>
 #Include <DownloadPackage>
 #Include <ExtractPackage>
+#Include <IBButtons>
+#Include <ScrollBar>
 
 GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 LngPackage := ReadSetting(, 'LngPackage', [])
@@ -19,35 +21,40 @@ AoEIIAIO := Gui(, 'GAME INTERFACE LANGUAGES')
 AoEIIAIO.BackColor := 'White'
 AoEIIAIO.OnEvent('Close', (*) => ExitApp())
 AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
-AoEIIAIO.SetFont('s10', 'Calibri')
-
-Try DownloadPackage(LngPackage[1], LngPackage[2]), ExtractPackage(LngPackage[2], 'DB\006',, 1)
-Catch {
-    MsgBox('Sorry!, something went wrong!', 'Error', 0x30)
-    ExitApp()
-}
-
+AoEIIAIO.SetFont('s10 Bold', 'Segoe UI')
+AoEIIAIOSB := ScrollBar(AoEIIAIO, 200, 400)
+HotIfWinActive("ahk_id " AoEIIAIO.Hwnd)
+Hotkey("WheelUp", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("WheelDown", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("+WheelUp", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("+WheelDown", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("Up", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("Down", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("+Up", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("+Down", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 1 : 0, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("PgUp", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 3 : 2, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("PgDn", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 3 : 2, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("+PgUp", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 3 : 2, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("+PgDn", (*) => AoEIIAIOSB.ScrollMsg((InStr(A_ThisHotkey,"Down") || InStr(A_ThisHotkey,"Dn")) ? 3 : 2, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("Home", (*) => AoEIIAIOSB.ScrollMsg(6, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+Hotkey("End", (*) => AoEIIAIOSB.ScrollMsg(7, 0, GetKeyState("Shift") ? 0x114 : 0x115, AoEIIAIO.Hwnd))
+HotIfWinActive
 GameLanguage := Map()
 Features := Map(), Features['Language'] := []
 Index := 0
-Loop Files, 'DB\006\*', 'D' {
-    If (A_LoopFileName = 'Restore')
+Loop Files, 'DB\Lng\*', 'D' {
+    If (A_LoopFileName ~= 'Flags')
         Continue
     ++Index
-    H := AoEIIAIO.AddButton('w200' (Mod(Index, 6) = 1 ? ' ym' : ''), A_LoopFileName)
-    H.SetFont('Bold s11')
-    CreateImageButton(H, 0, [[0xFFFFFF,,, 4, 0xCCCCCC, 2], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
+    H := AoEIIAIO.AddButton('xm w200', A_LoopFileName)
+    H1 := AoEIIAIO.AddPicture('xp+210 yp+1 Border', 'DB\Lng\Flags\' A_LoopFileName '.png')
+    CreateImageButton(H, 0, IBGray*)
     Features['Language'].Push(H)
     H.OnEvent('Click', ApplyLanguage)
+    H1.OnEvent('Click', ApplyLanguage)
     GameLanguage[A_LoopFileName] := H
 }
-H := AoEIIAIO.AddButton('xm w200', 'Restore')
-H.SetFont('Bold s11')
-CreateImageButton(H, 0, [[0x00A200,, 0xFFFFFF, 4, 0x008200, 2], [0x009000], [0x008200], [0xFFFFFF,, 0xCCCCCC]]*)
-Features['Language'].Push(H)
-H.OnEvent('Click', ApplyLanguage)
-GameLanguage['Restore'] := H
-AoEIIAIO.Show()
+AoEIIAIO.Show('w300 h400')
 If !ValidGameDirectory(GameDirectory) {
     For Each, Version in Features['Language'] {
         Version.Enabled := False
@@ -57,34 +64,15 @@ If !ValidGameDirectory(GameDirectory) {
     }
     ExitApp()
 }
-AnalyzeLanguage(1)
+AnalyzeLanguage()
 ; Aanalyzes game languages
-AnalyzeLanguage(Backup := 0) {
-    If Backup {
-        If !DirExist('DB\006\Restore') {
-            DirCreate('DB\006\Restore')
-            Loop Files, 'DB\006\*', 'D' {
-                Language := A_LoopFileName
-                Loop Files, 'DB\006\' Language '\*.*', 'R' {
-                    PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\006\' Language '\')
-                    If FileExist(GameDirectory '\' PathFile) {
-                        SplitPath('DB\006\Restore\' PathFile, &OutFileName, &OutDir)
-                        If !DirExist(OutDir) {
-                            DirCreate(OutDir)
-                        }
-                        If !FileExist(OutDir '\' OutFileName)
-                            FileCopy(GameDirectory '\' PathFile, OutDir '\' OutFileName)
-                    }
-                }
-            }
-        }
-    }
+AnalyzeLanguage() {
     MatchLanguage := ''
-    Loop Files, 'DB\006\*', 'D' {
+    Loop Files, 'DB\Lng\*', 'D' {
         Language := A_LoopFileName
         Match := True
-        Loop Files, 'DB\006\' Language '\*.*', 'R' {
-            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\006\' Language '\')
+        Loop Files, 'DB\Lng\' Language '\*.*', 'R' {
+            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\Lng\' Language '\')
             If !FileExist(GameDirectory '\' PathFile) {
                 Match := False
                 Break
@@ -96,16 +84,16 @@ AnalyzeLanguage(Backup := 0) {
         }
         If Match {
             MatchLanguage := Language
-            CreateImageButton(GameLanguage[MatchLanguage], 0, [[0x00A200,, 0xFFFFFF, 4, 0x008200, 2], [0x009000], [0x008200], [0xFFFFFF,, 0xCCCCCC]]*)
+            CreateImageButton(GameLanguage[MatchLanguage], 0, IBGreen*)
             GameLanguage[MatchLanguage].Redraw()
         }
     }
 }
 CleanUp() {
-    Loop Files, 'DB\006\*', 'D' {
+    Loop Files, 'DB\Lng\*', 'D' {
         Language := A_LoopFileName
-        Loop Files, 'DB\006\' Language '\*.*', 'R' {
-            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\006\' Language '\')
+        Loop Files, 'DB\Lng\' Language '\*.*', 'R' {
+            PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\Lng\' Language '\')
             If FileExist(GameDirectory '\' PathFile) {
                 FileDelete(GameDirectory '\' PathFile)
             }
@@ -114,19 +102,22 @@ CleanUp() {
 }
 ApplyLanguage(Ctrl, Info) {
     Try {
-        DefaultPB(Features['Language'])
+        If Type(Ctrl) = 'Gui.Pic' {
+            SplitPath(Ctrl.Text,,,, &Language)
+        } Else Language := Ctrl.Text
         EnableControls(Features['Language'], 0)
-        CloseGame()
+        DefaultPB(Features['Language'], IBGray)
         CleanUp()
-        If Ctrl.Text = 'Restore' {
-            DirCopy('DB\006\Restore', GameDirectory, 1)
-        } Else {
-            DirCopy('DB\006\' Ctrl.Text, GameDirectory, 1)
-        }
+        DirCopy('DB\Lng\' Language, GameDirectory, 1)
         AnalyzeLanguage()
         EnableControls(Features['Language'])
-        SoundPlay('DB\000\30 Wololo.mp3')
-    } Catch Error As Err {
-        MsgBox("Language set failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Language', 0x10)
+        SoundPlay('DB\Base\30 Wololo.mp3')
+    } Catch {
+        If !LockCheck(GameDirectory) {
+            EnableControls(Features['Language'])
+            MsgBox('Error occured while trying to install ' Language, 'Error!', 0x10)
+            Return
+        }
+        ApplyLanguage(Ctrl, Info) 
     }
 }
