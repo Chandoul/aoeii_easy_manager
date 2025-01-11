@@ -6,10 +6,12 @@ DownloadPackage(Link, Package, Clean := 0) {
         DirCreate(OutDir)
     If !FileExist(Package)
         Download(Link, Package)
-    Buff := FileRead(Package, 'RAW m2')
-    Hdr := StrGet(Buff,, 'CP0')
-    If Hdr != '7z'
-        Return False
+    If Package ~= '7z\.001$' {
+        Buff := FileRead(Package, 'RAW m2')
+        Hdr := StrGet(Buff,, 'CP0')
+        If Hdr != '7z'
+            Return False
+    }
     Return True
 }
 DownloadPackages(Packages, Clean := 0) {
