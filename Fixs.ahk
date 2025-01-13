@@ -114,18 +114,10 @@ ApplyFix(Ctrl, Info) {
             Msgbox('Sorry to inform you that ' Ctrl.Text ' does not apply on the current version your game is running! (1.0e, 1.5)', 'Incompatible!', 0x30)
             Return
         }
-        If VersionExist('aoc', '1.5', GameDirectory) && Ctrl.Text ~= 'v5'{
-            Msgbox('Sorry to inform you that Fix v5 does not apply on the current version your game is running! (1.5)', 'Incompatible!', 0x30)
-            Return
-        }
         EnableControls(Features['Fixs'], 0)
         DefaultPB(Features['Fixs'], IBBlack)
         CleansUp()
         DirCopy('DB\Fix\' Ctrl.Text, GameDirectory, 1)
-        ;If Ctrl.Text ~= 'v3|v4' {
-        ;    RegWrite('RUNASADMIN WINXPSP3', 'REG_SZ', RegKey, GameDirectory '\empires2.exe')
-        ;    RegWrite('RUNASADMIN WINXPSP3', 'REG_SZ', RegKey, GameDirectory '\age2_x1\age2_x1.exe')
-        ;}
         EnableControls(Features['Fixs'])
         AnalyzeFix()
         SoundPlay('DB\Base\30 Wololo.mp3')

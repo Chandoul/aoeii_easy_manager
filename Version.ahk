@@ -116,15 +116,10 @@ ApplyReqVersion(Ctrl, FGame) {
     }
 }
 ApplyVersion(Ctrl, Info) {
-    If FixExist('Fix v5', GameDirectory) && Ctrl.Text ~= '1\.5' {
-        Msgbox('Sorry to inform you that ' Ctrl.Text ' is not compatible with the fix (Fix v5)', 'Incompatible!', 0x30)
-        Return
-    }
     If FixExist('Fix v1', GameDirectory)
     || FixExist('Fix v2', GameDirectory)
     || FixExist('Fix v3', GameDirectory)
-    || FixExist('Fix v4', GameDirectory)
-    || FixExist('Fix v5', GameDirectory) {
+    || FixExist('Fix v4', GameDirectory) {
         If Ctrl.Text ~= '1\.0e|1\.1' {
             Msgbox('Sorry to inform you that ' Ctrl.Text ' is not compatible with the fixs (Fix v1, v2, v3, v4, v5)', 'Incompatible!', 0x30)
             Return
@@ -137,6 +132,14 @@ ApplyVersion(Ctrl, Info) {
         AnalyzeVersion()
         SoundPlay('DB\Base\30 Wololo.mp3')
         EnableOptions(FGame)
+        
+        If FixExist('Fix v5', GameDirectory) {
+            If FileExist(GameDirectory '\wndmode.dll')
+                FileDelete(GameDirectory '\wndmode.dll')
+            If FileExist(GameDirectory '\age2_x1\wndmode.dll')
+                FileDelete(GameDirectory '\age2_x1\wndmode.dll')
+            Return
+        }
     } Catch {
         If !LockCheck(GameDirectory) {
             EnableOptions(FGame)
