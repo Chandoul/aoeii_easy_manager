@@ -4,11 +4,7 @@ DB/Fix
 DB/Lng
 DB/VM
 DB/Version
-DB/015
-DB/*.exe
 Shortcuts
 Config.ini
 tmp/
 Setting.json
-SharedLib.ahk
-DrsBuild.ahk
