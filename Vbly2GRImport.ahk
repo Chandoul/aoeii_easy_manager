@@ -1,7 +1,7 @@
 #Requires AutoHotkey v2
 #SingleInstance Force
 #Include <ReadWriteJSON>
-
+FileEncoding('UTF-8')
 DrsBuild := 'DB\Base\DrsBuild.exe'
 DrsData := 'gamedata_x1_p1.drs'
 LngDLL := ['DB\Base\language_x1_p1.dll', 'language_x1_p1.dll']
