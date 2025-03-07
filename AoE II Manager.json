@@ -156,8 +156,5 @@
 		],
 		"VPNPath": "\\Hide ALL IP\\HideALLIP.exe",
 		"Layers": "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers"
-	},
-	"ubh": {
-		
 	}
 }
