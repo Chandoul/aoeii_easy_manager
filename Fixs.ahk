@@ -44,7 +44,7 @@ H := AoEIIAIO.AddLink('w350', 'Help Links:`n<a href="https://www.moddb.com/games
                                        . '`n<a href="https://aok.heavengames.com/blacksmith/showfile.php?fileid=13730">Ao2 patch:1.0 ,1.0c,2.0,2.0a,2.0c Widescreen + windowed</a>'
                                        . '`n<a href="https://aok.heavengames.com/blacksmith/showfile.php?fileid=13673">Aok 2.0 Generate Record To Ignore Player Who Leave</a>')
 H.SetFont('Bold')
-AoEIIAIO.AddText('ym w300 Center', 'General options:').SetFont('Bold')
+AoEIIAIO.AddText('ym w300', 'Options').SetFont('Bold')
 GeneralOptions := AoEIIAIO.AddListView('r4 -Hdr Checked -E0x200 wp', [' ', ' '])
 For Option in StrSplit(IniRead('DB\Fix\general.ini', 'General',, ''), '`n') {
 	OptionValue := StrSplit(Option, '=')
@@ -61,13 +61,25 @@ UpdateAoe2Patch(Ctrl, Item, Checked) {
 	GeneralOptions.Modify(Item, 'Check')
 	RegWrite(Item, 'REG_DWORD', RegKey, RegName)
 }
-WaterAni := AoEIIAIO.AddCheckBox('xp+4 yp+80 ' (RegRead(RegKey, 'WaterAnnimation', 0) ? 'Checked' : '') , 'Water animation')
+WaterAni := AoEIIAIO.AddCheckBox('xp+4 yp+80 ' (RegRead(RegKey, 'WaterAnnimation', 0) ? 'Checked' : '') , ' Water animation')
 WaterAni.OnEvent('Click', UpdateAoe2PatchWA)
 UpdateAoe2PatchWA(Ctrl, Info) {
 	RegWrite(Ctrl.Value, 'REG_DWORD', RegKey, 'WaterAnnimation')
 }
-AoEIIAIO.AddText('xp-4 yp+30 w300 Center', 'Window mod options:').SetFont('Bold')
-AdvanceOptions := AoEIIAIO.AddListView('r6 -Hdr Checked -E0x200 wp', [' '])
+WindModeCheck() {
+    RC := 0
+    RC += FileExist(GameDirectory '\windmode.dll') ? 1 : 0
+    RC += FileExist(GameDirectory '\age2_x1\wndmode.dll') ? 1 : 0
+    RC += FileExist(GameDirectory '\age2_x1\windmode.dll') ? 1 : 0
+    Return RC
+}
+WndOpt := AoEIIAIO.AddCheckbox('xp yp+30 w300' , 'Window mod')
+WndOpt.SetFont('Bold')
+WndOpt.OnEvent('Click', OnOffWndOpt)
+OnOffWndOpt(Ctrl, Info) {
+    AdvanceOptions.Enabled := Ctrl.Value ? 1 : 0
+}
+AdvanceOptions := AoEIIAIO.AddListView('xp-4 yp+20 r10 -Hdr Checked -E0x200 wp', [' '])
 For Option in StrSplit(IniRead('DB\Fix\wndmode.ini', 'WINDOWMODE',, ''), '`n') {
 	OptionValue := StrSplit(Option, '=')
 	AdvanceOptions.Add(OptionValue[2] ? 'Check' : '', OptionValue[1])
@@ -87,6 +99,10 @@ UpdateWndMod(Ctrl, Item, Checked) {
 }
 AoEIIAIO.Show()
 GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
+RC := WindModeCheck()
+WndOpt.Value := RC = 3 ? 1 : 0
+OnOffWndOpt(WndOpt, '')
+
 If !ValidGameDirectory(GameDirectory) {
     For Each, Fix in Features['Fixs'] {
         Fix.Enabled := False
@@ -100,6 +116,34 @@ AnalyzeFix()
 ; Applys fixes
 ApplyFix(Ctrl, Info) {
     Try {
+        If Ctrl.Text = 'Fix v0' {
+            If VersionExist('aoc', '1.0', GameDirectory) {
+                RunWait('"DB\Fix\Fix v0\Patcher.exe" "' GameDirectory '\age2_x1\age2_x1.exe" "DB\Fix\Fix v0\AoC_10.patch"',, 'Hide')
+                FileDelete('*.ws')
+            } Else If VersionExist('aoc', '1.0c', GameDirectory) || VersionExist('aoc', '1.0e', GameDirectory) {
+                RunWait('"DB\Fix\Fix v0\Patcher.exe" "' GameDirectory '\age2_x1\age2_x1.exe" "DB\Fix\Fix v0\AoC_10ce.patch"',, 'Hide')
+                FileDelete('*.ws')
+            } Else Return
+            EnableControls(Features['Fixs'], 0)
+            FileMove(GameDirectory '\age2_x1\age2_x1_' A_ScreenWidth 'x' A_ScreenHeight '.exe', GameDirectory '\age2_x1\age2_x1.exe', 1)
+            DirCopy('DB\Fix\Fix v0\Bmp\', 'DB\Fix\Fix v0\', 1)
+            RunWait("DB\Fix\Fix v0\ResizeFrames.exe", 'DB\Fix\Fix v0', 'Hide')
+            Loop Files 'DB\Fix\Fix v0\int*.bmp' {
+                RunWait('"DB\Fix\Fix v0\Bmp2Slp.exe" "' A_LoopFileFullPath '"',, 'Hide')
+            }
+
+            DRSBuild := '"DB\Fix\Fix v0\DrsBuild.exe"'
+            DRSRef := Format('{:05}', A_ScreenWidth) Format('{:04}', A_ScreenHeight)
+
+            FileCopy(GameDirectory '\Data\interfac.drs', GameDirectory '\Data\interfac_.drs', 1)
+            RunWait( DRSBuild ' /r "' GameDirectory '\Data\interfac_.drs" "DB\Fix\Fix v0\*.slp"',, 'Hide')
+            FileMove(GameDirectory '\Data\interfac_.drs', GameDirectory '\Data\' DRSRef '.ws', 1)
+            FileDelete('DB\Fix\Fix v0\*.bmp')
+            FileDelete('DB\Fix\Fix v0\*.slp')
+            EnableControls(Features['Fixs'])
+            SoundPlay('DB\Base\30 Wololo.mp3')
+            Return
+        }
         If Ctrl.Text = 'None' {
             EnableControls(Features['Fixs'], 0)
             DefaultPB(Features['Fixs'], IBBlack)
@@ -133,6 +177,9 @@ AnalyzeFix() {
     MatchFix := ''
     Loop Files, 'DB\Fix\*', 'D' {
         Fix := A_LoopFileName
+        If Fix = 'Fix v0' {
+            Continue
+        }
         Match := True
         Loop Files, 'DB\Fix\' Fix '\*.*', 'R' {
             PathFile := StrReplace(A_LoopFileDir '\' A_LoopFileName, 'DB\Fix\' Fix '\')

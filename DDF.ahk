@@ -4,8 +4,10 @@
 #Include <WatchOut>
 #Include <ValidGame>
 #Include <ReadWriteJSON>
+#Include <ImageButton>
 
 GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
+DDF := 'DB\Base\cnc-ddraw.2'
 
 AoEIIAIO := Gui(, 'DIRECT DRAW FIX')
 AoEIIAIO.BackColor := 'White'
@@ -16,28 +18,61 @@ AoEIIAIO.SetFont('s10 Bold', 'Calibri')
 SetRegView(A_Is64bitOS ? 64 : 32)
 
 AoEIIAIO.SetFont('s16')
-H := AoEIIAIO.AddButton('w300', 'Apply the fix')
-H.SetFont('s10 Bold', 'Calibri')
+H := AoEIIAIO.AddButton('w392', !FileExist(GameDirectory '\ddraw.dll') ? 'Apply the direct draw fix' : 'Remove the direct draw fix')
+H.SetFont('s12 Bold', 'Calibri')
 H.OnEvent('Click', DDFIX)
+
+AoEIIAIO.AddPicture('', 'DB\Base\aok.png')
+EHA := AoEIIAIO.AddButton('yp w350 h32' (!FileExist(GameDirectory '\ddraw.dll') ? ' Disabled' : ''), 'Age of Empires II Direct Draw Options')
+EHA.SetFont('s10 Bold', 'Calibri')
+EHA.OnEvent('Click', EDITDDFIXA)
+
+AoEIIAIO.AddPicture('xm', 'DB\Base\aoc.png')
+EHC := AoEIIAIO.AddButton('yp w350 h32' (!FileExist(GameDirectory '\ddraw.dll') ? ' Disabled' : ''), 'The Conquerors Direct Draw Options')
+EHC.SetFont('s10 Bold', 'Calibri')
+EHC.OnEvent('Click', EDITDDFIXC)
+
 DDFIX(Ctrl, Info) {
-	Loop Parse, "HKCU|HKLM|HKU", '|' {
-		HK := A_LoopField
-		Loop Parse, "Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Store"
-				  . "|S-1-5-21-2643294048-3836381920-2045673291-1001\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Store", '|' {
-			Loop Reg, HK "\" A_LoopField, 'R' {
-				If A_LoopRegName = GameDirectory '\empires2.exe'
-				|| A_LoopRegName = GameDirectory '\age2_x1\age2_x1.exe' {
-					RegWrite('', 'REG_BINARY', A_LoopRegkey, A_LoopRegName)
-				}
+	Command := StrSplit(Ctrl.Text, ' ')[1]
+	Switch Command {
+		Case 'Apply':
+			DirCopy(DDF, GameDirectory, 1)
+			DirCopy(DDF, GameDirectory '\age2_x1', 1)
+			Ctrl.Text := 'Remove the direct draw fix'
+			EHA.Enabled := True
+			EHC.Enabled := True
+		Case 'Remove':
+			Loop Files, DDF "\*.*", 'R' {
+				FilePath := StrReplace(A_LoopFileFullPath, A_ScriptDir '\')
+				FilePath := StrReplace(FilePath, DDF '\')
+				If FileExist(GameDirectory '\' FilePath)
+					FileDelete(GameDirectory '\' FilePath)
+				If FileExist(GameDirectory '\age2_x1\' FilePath)
+					FileDelete(GameDirectory '\age2_x1\' FilePath)
 			}
-		}
+			Ctrl.Text := 'Apply the direct draw fix'
+			EHA.Enabled := False
+			EHC.Enabled := False
 	}
 	Msgbox('Complete!', 'DIRECT DRAW', 0x40)
 }
+
+EDITDDFIXA(Ctrl, Info) {
+	If FileExist(GameDirectory '\cnc-ddraw config.exe') {
+		RunWait(GameDirectory '\cnc-ddraw config.exe')
+	}
+}
+
+EDITDDFIXC(Ctrl, Info) {
+	If FileExist(GameDirectory '\age2_x1\cnc-ddraw config.exe') {
+		RunWait(GameDirectory '\age2_x1\cnc-ddraw config.exe')
+	}
+}
+
 AoEIIAIO.Show()
 If !ValidGameDirectory(GameDirectory) {
-    If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40) {
-        Run('Game.ahk')
-    }
-    ExitApp()
+	If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40) {
+		Run('Game.ahk')
+	}
+	ExitApp()
 }

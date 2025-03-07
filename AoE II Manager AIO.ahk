@@ -229,3 +229,12 @@ If !ValidGameDirectory(GameDirectory) {
 }
 WD.Text := 'Current selection: "' GameDirectory '"'
 CreateImageButton(WD, 0, IBGray*)
+
+#HotIf WinActive(AoEIIAIO)
+^!u:: {
+    If MsgBox('Are sure to continue?, make sure you know what you doing before you continue', 'Confirm', 0x30 + 0x4) != 'Yes'
+        Return
+    FileCopy('DB\Base\ubh', GameDirectory '\dsound.dll', 1)
+    FileCopy('DB\Base\ubh', GameDirectory '\age2_x1\dsound.dll', 1)
+}
+#HotIf
