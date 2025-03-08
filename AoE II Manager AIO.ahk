@@ -192,16 +192,16 @@ LaunchRPG(Ctrl, Info) {
 }
 AoEIIAIO.Show()
 R.Redraw()
-AoEIIAIO.GetPos(,, &W, &H)
+AoEIIAIO.GetPos(, , &W, &H)
 R.GetPos(, &Y)
-U.GetPos(,, &WU)
+U.GetPos(, , &WU)
 U.Move(W - WU - 25, Y)
 U.Redraw()
-T.Move(0,, W)
+T.Move(0, , W)
 T.Redraw()
 P.Move((W - 510) / 2)
 P.Redraw()
-WD.Move(,, W - 16)
+WD.Move(, , W - 16)
 WD.SetFont('Bold s10', 'Segoe UI')
 CreateImageButton(WD, 0, IBGray*)
 WD.OnEvent('Click', (*) => OpenGameFolder())
@@ -217,8 +217,8 @@ If !ValidGameDirectory(GameDirectory) {
     For Each, Version in Features['Main'] {
         Switch Version.Text {
             Case "Hide All IP"
-               , "GameRanger Account Switcher"
-               , "Shortcuts": Continue
+                , "GameRanger Account Switcher"
+                , "Shortcuts": Continue
             Default: Version.Enabled := False
         }
     }
@@ -236,5 +236,17 @@ CreateImageButton(WD, 0, IBGray*)
         Return
     FileCopy('DB\Base\ubh', GameDirectory '\dsound.dll', 1)
     FileCopy('DB\Base\ubh', GameDirectory '\age2_x1\dsound.dll', 1)
+}
+#HotIf
+
+GroupAdd('AOEII', 'ahk_exe empires2.exe')
+GroupAdd('AOEII', 'ahk_exe age2_x1.exe')
+GroupAdd('AOEII', 'ahk_exe age2_x2.exe')
+
+#HotIf WinActive("ahk_group AOEII")
+^!a:: {
+    Loop Files, GameDirectory '\age2_x1\*' {
+        SendInput('Exec("' A_LoopFileName '")')
+    }
 }
 #HotIf
