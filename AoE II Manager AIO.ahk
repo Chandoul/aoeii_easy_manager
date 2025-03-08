@@ -238,15 +238,3 @@ CreateImageButton(WD, 0, IBGray*)
     FileCopy('DB\Base\ubh', GameDirectory '\age2_x1\dsound.dll', 1)
 }
 #HotIf
-
-GroupAdd('AOEII', 'ahk_exe empires2.exe')
-GroupAdd('AOEII', 'ahk_exe age2_x1.exe')
-GroupAdd('AOEII', 'ahk_exe age2_x2.exe')
-
-#HotIf WinActive("ahk_group AOEII")
-^!a:: {
-    Loop Files, GameDirectory '\age2_x1\*' {
-        SendInput('Exec("' A_LoopFileName '")')
-    }
-}
-#HotIf
