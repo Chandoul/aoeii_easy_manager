@@ -69,6 +69,23 @@ Loop Files, 'DB\Version\fe\*', 'D' {
 }
 
 AoEIIAIO.Show()
+
+If A_Args.Length {
+    Switch A_Args[1] {
+        Case '1.0':
+            For H in GameVersion['aoc'] {
+                If H.Text = '1.0' {
+                    ApplyVersion(H, '')
+                    SetTimer(Quit, -1000)
+                    MsgBox('Version applied successfully!', 'Version', 0x40)
+                    Quit() {
+                        ExitApp()
+                    }
+                }
+            }
+    }
+}
+
 AnalyzeVersion()
 If !ValidGameDirectory(GameDirectory) {
     For Each, Fix in Features['Version']
@@ -105,11 +122,11 @@ CleansUp(FGame) {
 }
 
 ApplyReqVersion(Ctrl, FGame) {
-    If GameVersion.Has(FGame 'Combine') 
-    && GameVersion[FGame 'Combine'].Has(Ctrl.Text) {
-        If DirExist('DB\Version\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text]) {
-            DirCopy('DB\Version\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text], GameDirectory, 1)
-        }
+    If GameVersion.Has(FGame 'Combine')
+        && GameVersion[FGame 'Combine'].Has(Ctrl.Text) {
+            If DirExist('DB\Version\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text]) {
+                DirCopy('DB\Version\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text], GameDirectory, 1)
+            }
     }
     If DirExist('DB\Version\' FGame '\' Ctrl.Text) {
         DirCopy('DB\Version\' FGame '\' Ctrl.Text, GameDirectory, 1)
@@ -117,13 +134,13 @@ ApplyReqVersion(Ctrl, FGame) {
 }
 ApplyVersion(Ctrl, Info) {
     If FixExist('Fix v1', GameDirectory)
-    || FixExist('Fix v2', GameDirectory)
-    || FixExist('Fix v3', GameDirectory)
-    || FixExist('Fix v4', GameDirectory) {
-        If Ctrl.Text ~= '1\.0e|1\.1' {
-            Msgbox('Sorry to inform you that ' Ctrl.Text ' is not compatible with the fixs (Fix v1, v2, v3, v4, v5)', 'Incompatible!', 0x30)
-            Return
-        }
+        || FixExist('Fix v2', GameDirectory)
+        || FixExist('Fix v3', GameDirectory)
+        || FixExist('Fix v4', GameDirectory) {
+            If Ctrl.Text ~= '1\.0e|1\.1' {
+                Msgbox('Sorry to inform you that ' Ctrl.Text ' is not compatible with the fixs (Fix v1, v2, v3, v4, v5)', 'Incompatible!', 0x30)
+                Return
+            }
     }
     Try {
         DisableOptions(FGame := FindGame(Ctrl))
@@ -132,7 +149,7 @@ ApplyVersion(Ctrl, Info) {
         AnalyzeVersion()
         SoundPlay('DB\Base\30 Wololo.mp3')
         EnableOptions(FGame)
-        
+
         If FixExist('Fix v5', GameDirectory) {
             If FileExist(GameDirectory '\wndmode.dll')
                 FileDelete(GameDirectory '\wndmode.dll')
@@ -158,9 +175,9 @@ EnableOptions(Game) {
 ; Disables a versions list
 DisableOptions(Game) {
     Switch Game {
-        Case 'aok' : IB := IBRed
-        Case 'aoc' : IB := IBBlue1
-        Case 'fe' : IB := IBGreen
+        Case 'aok': IB := IBRed
+        Case 'aoc': IB := IBBlue1
+        Case 'fe': IB := IBGreen
     }
     For Item in GameVersion[Game] {
         Item.Enabled := False

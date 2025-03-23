@@ -38,6 +38,19 @@ DDFIX(Ctrl, Info) {
 		Case 'Apply':
 			DirCopy(DDF, GameDirectory, 1)
 			DirCopy(DDF, GameDirectory '\age2_x1', 1)
+
+			IniWrite('false', GameDirectory '\ddraw.ini', 'ddraw',  'fullscreen')
+			IniWrite('false', GameDirectory '\ddraw.ini', 'ddraw',  'border')
+			IniWrite('true'	, GameDirectory '\ddraw.ini', 'ddraw',  'windowed')
+			IniWrite('true'	, GameDirectory '\ddraw.ini', 'ddraw',  'devmode')
+			IniWrite('0'	, GameDirectory '\ddraw.ini', 'ddraw',  'hook')
+
+			IniWrite('false', GameDirectory '\age2_x1\ddraw.ini', 'ddraw',  'fullscreen')
+			IniWrite('false', GameDirectory '\age2_x1\ddraw.ini', 'ddraw',  'border')
+			IniWrite('true'	, GameDirectory '\age2_x1\ddraw.ini', 'ddraw',  'windowed')
+			IniWrite('true'	, GameDirectory '\age2_x1\ddraw.ini', 'ddraw',  'devmode')
+			IniWrite('0'	, GameDirectory '\age2_x1\ddraw.ini', 'ddraw',  'hook')
+
 			Ctrl.Text := 'Remove the direct draw fix'
 			EHA.Enabled := True
 			EHC.Enabled := True
@@ -54,6 +67,8 @@ DDFIX(Ctrl, Info) {
 			EHA.Enabled := False
 			EHC.Enabled := False
 	}
+	If A_Args.Length
+		SetTimer(Quit, -1000)
 	Msgbox('Complete!', 'DIRECT DRAW', 0x40)
 }
 
@@ -74,5 +89,19 @@ If !ValidGameDirectory(GameDirectory) {
 	If 'Yes' = MsgBox('Game is not yet located!, want to select now?', 'Game', 0x4 + 0x40) {
 		Run('Game.ahk')
 	}
+	ExitApp()
+}
+
+If A_Args.Length {
+	Switch A_Args[1] {
+		Case 'Apply':
+			H.Text := 'Apply the direct draw fix'
+			DDFIX(H, '')
+			
+	}
+}
+
+
+Quit() {
 	ExitApp()
 }

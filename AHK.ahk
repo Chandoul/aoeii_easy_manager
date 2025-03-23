@@ -3,7 +3,8 @@
 
 #Include <WatchOut>
 #Include <ImageButton>
-#Include <ExecScript>
+#Include <Json>
+#Include <HashFile>
 
 AoEIIAIO := Gui(, 'GAME SHORTCUTS')
 AoEIIAIO.BackColor := 'White'
@@ -11,50 +12,119 @@ AoEIIAIO.OnEvent('Close', (*) => ExitApp())
 AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
 AoEIIAIO.SetFont('s10 Bold', 'Segoe UI')
 
-LV := AoEIIAIO.AddListView('w600 cGreen r10', ['Currently running shortcuts'])
-LV.Add(, '✓ [ 1 ] AoE II: Exits the game using [ Win ] + [ q ]')
-LV.Add(, '✓ [ 2 ] AoE II: Unselects one unit on a group selection using [ Alt ] + [ Right Mouse Button ]')
-Loop Files, 'Shortcuts\*.ahk' {
-    LV.Add(, '✓ [ ' A_Index + 2 ' ] Additional scripts - [ ' A_LoopFileName ' ]')
-    ExecScript(A_LoopFileFullPath)
-    LV.ModifyCol(1, 'AutoHdr')
+LV := AoEIIAIO.AddListView('w600 cGreen r10', ['Hotkey', 'Comment'])
+LV.OnEvent('Click', ShowHotkey)
+Try HotkeyDef := ReadHotkey()
+Catch
+    HotkeyDef := Map()
+Script := "
+(
+    #Requires AutoHotkey v2
+    #SingleInstance Force
+    GroupAdd('AOKAOC', 'ahk_exe empires2.exe')
+    GroupAdd('AOKAOC', 'ahk_exe age2_x1.exe')
+    GroupAdd('AOKAOC', 'ahk_exe age2_x2.exe')
+    #HotIf WinActive('ahk_group AOKAOC')
+)"
+For HotkeyName, HotOpt in HotkeyDef {
+    LV.Add(, HotkeyName, '# ' HotOpt['Comment'])
+    Script .= '`n' HotkeyName ':: {`n' HotOpt['Action'] '`n}'
 }
+Script .= '
+(
+    #HotIf
+    ProcessWaitClose(A_Args[1])
+    ExitApp()
+)'
+LV.ModifyCol(1, 'AutoHdr')
+
+AoEIIAIO.SetFont('Norm s8')
+Import := AoEIIAIO.AddButton('xm w100', 'Import')
+Import.OnEvent('Click', (*) => Import_v2_4_Hotkeys())
+
+Update := AoEIIAIO.AddButton('yp xm+500 w100', 'Save')
+Update.OnEvent('Click', (*) => UpdateHotkeys())
+
+AoEIIAIO.SetFont('s10')
+AddHotName := AoEIIAIO.AddEdit('xm w600 cBlue')
+AddHotName.OnEvent('Change', (*) => AutoSave())
+AddHotCom := AoEIIAIO.AddEdit('w600 cGreen')
+AddHotCom.OnEvent('Change', (*) => AutoSave())
+AddHotAction := AoEIIAIO.AddEdit('w600 r10 cBlack')
+AddHotAction.OnEvent('Change', (*) => AutoSave())
+
+If FileExist('Shortcuts\Hotkeys.json') {
+    Hash := HashFile('Shortcuts\Hotkeys.json')
+    If !FileExist('Shortcuts\' Hash '.ahk') {
+        FileAppend(Script, 'Shortcuts\' Hash '.ahk')
+    }
+    Run('Shortcuts\' Hash '.ahk ' ProcessExist())
+}
+
+If !DirExist('Shortcuts')
+    DirCreate('Shortcuts')
+
 AoEIIAIO.Show()
 
-GroupAdd('AOEII', 'ahk_exe empires2.exe')
-GroupAdd('AOEII', 'ahk_exe age2_x1.exe')
-GroupAdd('AOEII', 'ahk_exe age2_x2.exe')
-#HotIf WinActive("ahk_group AOEII")
-;------------------------------------------------------;
-; Unselects one unit on a group selection using        ;
-; Alt + Right Mouse Button combination                 ;
-; Visit https://www.autohotkey.com/docs/v2/Hotkeys.htm ;
-; For more information                                 ;
-;------------------------------------------------------;
-#q:: {
-    For Each, App in ['empires2.exe'
-                    , 'age2_x1.exe'
-                    , 'age2_x2.exe'] {
-        If ProcessExist(App) {
-            ProcessClose(App)
-        }
-    }
-}
-;------------------------------------------------------;
-; Exits the game using Win + q combination             ;
-; Visit https://www.autohotkey.com/docs/v2/Hotkeys.htm ;
-; For more information                                 ;
-;------------------------------------------------------;
-!RButton:: {
-    WinGetPos(,, &W, &H, 'ahk_group AOEII')
-    If W != A_ScreenWidth || H != A_ScreenHeight {
+ShowHotkey(Ctrl, Info) {
+    Key := Ctrl.GetNext()
+    If !Key {
         Return
     }
-    MouseClick('Right', , , , 0)
-    MouseGetPos(&X, &Y)
-    SendInput('{LCtrl Down}')
-    MouseClick('Left', 315, A_ScreenHeight - 130, , 0)
-    SendInput('{Ctrl Up}')
-    MouseMove(X, Y, 0)
+    HotkeyDef := ReadHotkey()
+    If HotkeyDef.Has(HK := Ctrl.GetText(Key)) {
+        AddHotName.Value := HK
+        AddHotCom.Value := HotkeyDef[HK]['Comment']
+        AddHotAction.Value := HotkeyDef[HK]['Action']
+    }
 }
-#HotIf
+
+AutoSave() {
+    If AddHotName.Value != '' {
+        HotkeyDef[AddHotName.Value] := Map(
+            'Action', AddHotAction.Value,
+            'Comment', AddHotCom.Value
+        )
+    }
+}
+
+UpdateHotkeys() {
+    FileObj := FileOpen('Shortcuts\Hotkeys.json', 'w')
+    FileObj.Write(JSON.Dump(HotkeyDef, '`t'))
+    FileObj.Close()
+    If MsgBox('Changes are saved!`nTo take effect you need to reload the script, reload now?', 'Save', 0x40 + 0x4) = 'Yes' {
+        Reload
+    }
+}
+
+Import_v2_4_Hotkeys() {
+    SearcDir := FileSelect('D')
+    HotkeyDef := ReadHotkey()
+    Loop Files, SearcDir '\*.ahk' {
+        Content := FileRead(A_LoopFileFullPath)
+        If RegExMatch(Content, "\QHotkey('\E(.*)\Q', Action)\E", &HKName) || RegExMatch(Content, "(.*)::", &HKName) {
+            If HotkeyDef.Has(HKName[1])
+                Continue
+            HotkeyDef[HKName[1]] := Map()
+        }
+        If RegExMatch(Content, "s)Action\Q(*) \E{(.*)\Q}", &HKAction)
+            HotkeyDef[HKName[1]]['Action'] := HKAction[1]
+
+        If RegExMatch(Content, ";(.*)", &HKComment)
+            HotkeyDef[HKName[1]]['Comment'] := HKComment[1]
+    }
+    UpdateHotkey(HotkeyDef)
+    Reload()
+}
+
+UpdateHotkey(Keys) {
+    O := FileOpen('Shortcuts\Hotkeys.json', 'w')
+    O.Write(JSON.Dump(Keys, '`t'))
+    O.Close()
+}
+
+ReadHotkey() {
+    Try Return JSON.Load(FileRead('Shortcuts\Hotkeys.json'))
+    Catch
+        Return Map()
+}

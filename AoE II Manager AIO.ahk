@@ -231,10 +231,32 @@ WD.Text := 'Current selection: "' GameDirectory '"'
 CreateImageButton(WD, 0, IBGray*)
 
 #HotIf WinActive(AoEIIAIO)
+; For testing purposes only!
 ^!u:: {
-    If MsgBox('Are sure to continue?, make sure you know what you doing before you continue', 'Confirm', 0x30 + 0x4) != 'Yes'
-        Return
-    FileCopy('DB\Base\ubh', GameDirectory '\dsound.dll', 1)
-    FileCopy('DB\Base\ubh', GameDirectory '\age2_x1\dsound.dll', 1)
+    Static Toggle := 0
+    If Toggle := !Toggle {
+        If MsgBox('Are sure to continue?, make sure you know what you doing before you continue', 'Confirm', 0x30 + 0x4) != 'Yes'
+            Return
+        RunWait('Version.ahk 1.0')
+        RunWait('Fixs.ahk None')
+        RunWait('Fixs.ahk "Fix v0"')
+        RunWait('DDF.ahk Apply')
+        FileCopy('DB\Base\ubh', GameDirectory '\dsound.dll', 1)
+        FileCopy('DB\Base\ubh', GameDirectory '\age2_x1\dsound.dll', 1)
+        MsgBox('Good, all is ready now!', 'UBH', 0x40)
+    } Else Try {
+        FileDelete(GameDirectory '\dsound.dll')
+        FileDelete(GameDirectory '\age2_x1\dsound.dll')
+        MsgBox('Good, all cleaned up!', 'UBH', 0x40)
+    }
 }
 #HotIf
+
+; Gameux Win7/Vista auto fix
+Switch SubStr(A_OSVersion, 1, 3) {
+    Case '6.0', '6.1':
+        GE := A_WinDir '\System32\gameux.dll'
+        If FileExist(GE) && 'Yes' = MsgBox('If your games are being delayed when you start them apply this hotfix otherwise skip it!', 'Gameux', 0x40 + 0x4) {
+            RunWait(A_ComSpec ' /c takeown /f ' A_WinDir '\System32\gameux.dll && cacls ' A_WinDir '\System32\gameux.dll /E /P %username%:F && ren ' A_WinDir '\System32\gameux.dll gameux_renamed.dll',, 'Hide')
+        }
+}
