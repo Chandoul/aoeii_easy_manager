@@ -28,8 +28,6 @@ AoEIIAIO.OnEvent('Close', (*) => ExitApp())
 AoEIIAIO.MarginX := AoEIIAIO.MarginY := 10
 AoEIIAIO.SetFont('s10', 'Segoe UI')
 
-;AoEIIAIO.AddPicture('x0 y0', 'DB\Base\Back.png')
-
 CreateImageButton("SetDefGuiColor", '0x030303')
 
 WD := AoEIIAIO.AddButton('x0 y0', '...')
@@ -235,7 +233,7 @@ CreateImageButton(WD, 0, IBGray*)
 ^!u:: {
     Static Toggle := 0
     If Toggle := !Toggle {
-        If MsgBox('Are sure to continue?, make sure you know what you doing before you continue', 'Confirm', 0x30 + 0x4) != 'Yes'
+        If MsgBox('Are sure to continue?, make sure you know what you doing before you continue', 'UBH Confirm', 0x30 + 0x4) != 'Yes'
             Return
         RunWait('Version.ahk 1.0')
         RunWait('Fixs.ahk None')

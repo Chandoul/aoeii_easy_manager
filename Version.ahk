@@ -122,11 +122,12 @@ CleansUp(FGame) {
 }
 
 ApplyReqVersion(Ctrl, FGame) {
-    If GameVersion.Has(FGame 'Combine')
-        && GameVersion[FGame 'Combine'].Has(Ctrl.Text) {
-            If DirExist('DB\Version\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text]) {
-                DirCopy('DB\Version\' FGame '\' GameVersion[FGame 'Combine'][Ctrl.Text], GameDirectory, 1)
-            }
+    If GameVersion.Has(FGame 'Combine') && GameVersion[FGame 'Combine'].Has(Ctrl.Text) {
+		For Version in GameVersion[FGame 'Combine'][Ctrl.Text] {
+			If DirExist('DB\Version\' FGame '\' Version) {
+				DirCopy('DB\Version\' FGame '\' Version, GameDirectory, 1)
+			}
+		}
     }
     If DirExist('DB\Version\' FGame '\' Ctrl.Text) {
         DirCopy('DB\Version\' FGame '\' Ctrl.Text, GameDirectory, 1)
@@ -150,12 +151,15 @@ ApplyVersion(Ctrl, Info) {
         SoundPlay('DB\Base\30 Wololo.mp3')
         EnableOptions(FGame)
 
-        If FixExist('Fix v5', GameDirectory) {
-            If FileExist(GameDirectory '\wndmode.dll')
+        If FileExist(GameDirectory '\ddraw.dll') {
+            If FileExist(GameDirectory '\windmode.dll')
+                FileDelete(GameDirectory '\windmode.dll')
+            If FileExist(GameDirectory '\age2_x1\windmode.dll')
+                FileDelete(GameDirectory '\age2_x1\windmode.dll')
+			If FileExist(GameDirectory '\wndmode.dll')
                 FileDelete(GameDirectory '\wndmode.dll')
             If FileExist(GameDirectory '\age2_x1\wndmode.dll')
                 FileDelete(GameDirectory '\age2_x1\wndmode.dll')
-            Return
         }
     } Catch {
         If !LockCheck(GameDirectory) {

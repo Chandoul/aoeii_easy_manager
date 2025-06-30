@@ -130,7 +130,9 @@ DMItemVisible(Index, Vis := True) {
 }
 DMItemSet(Index, Mod, Prop) {
     Index := Format('{:03}', Index)
-    DMListH[Index]['Title'].Text := Mod
+    Try DMListH[Index]['Title'].Text := Mod ' ' FileRead(GameDirectory '\Games\' Mod '\version.ini')
+    Catch
+        DMListH[Index]['Title'].Text := Mod
     CreateImageButton(DMListH[Index]['Title'], 0, [[0xFFFFFF], [0xE6E6E6], [0xCCCCCC], [0xFFFFFF,, 0xCCCCCC]]*)
     DMListH[Index]['Img'].Value := Prop['Img']
     DMListH[Index]['Description'].Value := Prop['Description']

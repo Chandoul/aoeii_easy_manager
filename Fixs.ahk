@@ -173,6 +173,16 @@ ApplyFix(Ctrl, Info) {
         DirCopy('DB\Fix\' Ctrl.Text, GameDirectory, 1)
         EnableControls(Features['Fixs'])
         AnalyzeFix()
+        If FileExist(GameDirectory '\ddraw.dll') {
+            If FileExist(GameDirectory '\windmode.dll')
+                FileDelete(GameDirectory '\windmode.dll')
+            If FileExist(GameDirectory '\age2_x1\windmode.dll')
+                FileDelete(GameDirectory '\age2_x1\windmode.dll')
+			If FileExist(GameDirectory '\wndmode.dll')
+                FileDelete(GameDirectory '\wndmode.dll')
+            If FileExist(GameDirectory '\age2_x1\wndmode.dll')
+                FileDelete(GameDirectory '\age2_x1\wndmode.dll')
+        }
         SoundPlay('DB\Base\30 Wololo.mp3')
     } Catch {
         If !LockCheck(GameDirectory) {

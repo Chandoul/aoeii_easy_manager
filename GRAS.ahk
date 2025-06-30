@@ -14,6 +14,10 @@ SettingBak := A_AppData '\GR Account Switcher\Backup'
 SettingIni := A_AppData '\GR Account Switcher\Setting.ini'
 If !DirExist(SettingBak) {
     DirCreate(SettingBak)
+    FileCopy(GRS, SettingBak '\' A_Now)
+}
+If FileExist(GRS) && !FileExist(Setting '\CurrentAccount') {
+    FileCopy(GRS, Setting '\CurrentAccount')
 }
 Window := Gui(, T := 'GR Account Switcher')
 Window.BackColor := 'White'
@@ -95,7 +99,7 @@ AccCre.OnEvent('Click', CreAccount)
 CreAccount(Ctrl, Info) {
     ProcessClose('GameRanger.exe')
     ProcessWaitClose('GameRanger.exe')
-    FileMove(GRS, SettingBak '\' A_Now)
+    
     Run(GR)
 }
 ProfileAdd() {

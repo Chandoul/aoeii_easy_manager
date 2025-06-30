@@ -51,6 +51,14 @@ DDFIX(Ctrl, Info) {
 			IniWrite('true'	, GameDirectory '\age2_x1\ddraw.ini', 'ddraw',  'devmode')
 			IniWrite('0'	, GameDirectory '\age2_x1\ddraw.ini', 'ddraw',  'hook')
 
+			If FileExist(GameDirectory '\windmode.dll')
+                FileDelete(GameDirectory '\windmode.dll')
+            If FileExist(GameDirectory '\age2_x1\windmode.dll')
+                FileDelete(GameDirectory '\age2_x1\windmode.dll')
+			If FileExist(GameDirectory '\wndmode.dll')
+                FileDelete(GameDirectory '\wndmode.dll')
+            If FileExist(GameDirectory '\age2_x1\wndmode.dll')
+                FileDelete(GameDirectory '\age2_x1\wndmode.dll')
 			Ctrl.Text := 'Remove the direct draw fix'
 			EHA.Enabled := True
 			EHC.Enabled := True
@@ -97,7 +105,6 @@ If A_Args.Length {
 		Case 'Apply':
 			H.Text := 'Apply the direct draw fix'
 			DDFIX(H, '')
-			
 	}
 }
 
