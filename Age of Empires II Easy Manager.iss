@@ -1,5 +1,5 @@
 #define APP_NAME "Age of Empires II Easy Manager"
-#define APP_VERSION "3.7"
+#define APP_VERSION "3.8"
 #define INSTALL_DIR "{commonpf}\Age of Empires II Easy Manager"
 #define AHK "AutoHotkey"
 #define SETUP_ICON "Bin\Icon.bmp"

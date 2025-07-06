@@ -12,6 +12,7 @@
 #Include <IBButtons>
 #Include <FixExist>
 
+GameFix := ReadSetting(, 'GameFix')
 GameVersion := ReadSetting(, 'RequireVersion')
 GameDirectory := ReadSetting('Setting.json', 'GameLocation', '')
 VersionPackage := ReadSetting(, 'VersionPackage')
@@ -68,21 +69,35 @@ Loop Files, 'DB\Version\fe\*', 'D' {
     Features['Version'].Push(H)
 }
 
+AoEIIAIO.AddText('xm h30', 'Default fix to be applied after changing version:')
+DF := AoEIIAIO.AddDropDownList('xp yp+25 Choose7 wp', GameFix['FIX'])
+
 AoEIIAIO.Show()
 
 If A_Args.Length {
-    Switch A_Args[1] {
-        Case '1.0':
-            For H in GameVersion['aoc'] {
-                If H.Text = '1.0' {
-                    ApplyVersion(H, '')
-                    SetTimer(Quit, -1000)
-                    MsgBox('Version applied successfully!', 'Version', 0x40)
-                    Quit() {
-                        ExitApp()
-                    }
-                }
+    For H in GameVersion['aok'] {
+        If H.Text = A_Args[1] {
+            ApplyVersion(H, '')
+            SetTimer(Quit, -2000)
+            MsgBox(H.Text ' version applied successfully!', 'Version', 0x40)
+            Quit() {
+                ExitApp()
             }
+        }
+    }
+    For H in GameVersion['aoc'] {
+        If H.Text = A_Args[1] {
+            ApplyVersion(H, '')
+            SetTimer(Quit, -2000)
+            MsgBox(H.Text ' version applied successfully!', 'Version', 0x40)
+        }
+    }
+    For H in GameVersion['fe'] {
+        If H.Text = A_Args[1] {
+            ApplyVersion(H, '')
+            SetTimer(Quit, -2000)
+            MsgBox(H.Text ' version applied successfully!', 'Version', 0x40)
+        }
     }
 }
 
@@ -123,11 +138,11 @@ CleansUp(FGame) {
 
 ApplyReqVersion(Ctrl, FGame) {
     If GameVersion.Has(FGame 'Combine') && GameVersion[FGame 'Combine'].Has(Ctrl.Text) {
-		For Version in GameVersion[FGame 'Combine'][Ctrl.Text] {
-			If DirExist('DB\Version\' FGame '\' Version) {
-				DirCopy('DB\Version\' FGame '\' Version, GameDirectory, 1)
-			}
-		}
+        For Version in GameVersion[FGame 'Combine'][Ctrl.Text] {
+            If DirExist('DB\Version\' FGame '\' Version) {
+                DirCopy('DB\Version\' FGame '\' Version, GameDirectory, 1)
+            }
+        }
     }
     If DirExist('DB\Version\' FGame '\' Ctrl.Text) {
         DirCopy('DB\Version\' FGame '\' Ctrl.Text, GameDirectory, 1)
@@ -151,16 +166,14 @@ ApplyVersion(Ctrl, Info) {
         SoundPlay('DB\Base\30 Wololo.mp3')
         EnableOptions(FGame)
 
-        If FileExist(GameDirectory '\ddraw.dll') {
-            If FileExist(GameDirectory '\windmode.dll')
-                FileDelete(GameDirectory '\windmode.dll')
-            If FileExist(GameDirectory '\age2_x1\windmode.dll')
-                FileDelete(GameDirectory '\age2_x1\windmode.dll')
-			If FileExist(GameDirectory '\wndmode.dll')
-                FileDelete(GameDirectory '\wndmode.dll')
-            If FileExist(GameDirectory '\age2_x1\wndmode.dll')
-                FileDelete(GameDirectory '\age2_x1\wndmode.dll')
+        If Ctrl.Text = '1.6' {
+            MsgBox('1 - This version works only with v1.6 GameData, if you are willing to use it please install v1.6 GameData from Data Mods section!!.'
+            . "`n`n2 - Added to that, this version is exprimental, if you experience any bugs don't use it.", 'Warning!', 0x30)
+            Return
         }
+        If DF.Text = 'None'
+            Return
+        RunWait('Fixs.ahk "' DF.Text '"')
     } Catch {
         If !LockCheck(GameDirectory) {
             EnableOptions(FGame)

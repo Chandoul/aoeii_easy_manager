@@ -26,23 +26,23 @@ AoEIIAIO.SetFont('s9 Bold', 'Segoe UI')
 
 Select := AoEIIAIO.AddButton('xm w200 h27', 'Select')
 Select.OnEvent('Click', SelectDirectory)
-CreateImageButton(Select, 0, [['DB\Base\pick_folder_normal.png'], ['DB\Base\pick_folder_hover.png'], ['DB\Base\pick_folder_click.png'], ['DB\Base\pick_folder_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(Select, 0, [['DB\Base\pick_folder_normal.png'], ['DB\Base\pick_folder_hover.png'], ['DB\Base\pick_folder_click.png'], ['DB\Base\pick_folder_disable.png', , 0xCCCCCC]]*)
 H := AoEIIAIO.AddButton('w200 yp', 'Open the selected')
 H.OnEvent('Click', (*) => GameDirectory.Value ? Run(GameDirectory.Value '\') : 0)
-CreateImageButton(H, 0, [['DB\Base\open_aoeii_normal.png'], ['DB\Base\open_aoeii_hover.png'], ['DB\Base\open_aoeii_click.png'], ['DB\Base\open_aoeii_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(H, 0, [['DB\Base\open_aoeii_normal.png'], ['DB\Base\open_aoeii_hover.png'], ['DB\Base\open_aoeii_click.png'], ['DB\Base\open_aoeii_disable.png', , 0xCCCCCC]]*)
 GameDirectory := AoEIIAIO.AddEdit('cRed xm ReadOnly w410 -E0x200 Border BackgroundWhite Center')
 SelectGR := AoEIIAIO.AddButton('xm w200', 'Select from GameRanger')
-CreateImageButton(SelectGR, 0, [['DB\Base\gr_get_normal.png'], ['DB\Base\gr_get_hover.png'], ['DB\Base\gr_get_click.png'], ['DB\Base\gr_get_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(SelectGR, 0, [['DB\Base\gr_get_normal.png'], ['DB\Base\gr_get_hover.png'], ['DB\Base\gr_get_click.png'], ['DB\Base\gr_get_disable.png', , 0xCCCCCC]]*)
 SelectGR.OnEvent('Click', SelectDirectoryGR)
-H := AoEIIAIO.AddButton('w200 yp Disabled', 'Set into GameRanger')
-CreateImageButton(H, 0, [['DB\Base\gr_get_normal.png'], ['DB\Base\gr_get_hover.png'], ['DB\Base\gr_get_click.png'], ['DB\Base\gr_get_disable.png',, 0xCCCCCC]]*)
+H := AoEIIAIO.AddButton('w200 yp', 'Set into GameRanger')
+CreateImageButton(H, 0, [['DB\Base\gr_get_normal.png'], ['DB\Base\gr_get_hover.png'], ['DB\Base\gr_get_click.png'], ['DB\Base\gr_get_disable.png', , 0xCCCCCC]]*)
 H.OnEvent('Click', SetDirectoryGR)
 H := AoEIIAIO.AddButton('xm w410', 'Download the game')
 H.OnEvent('Click', DownloadGame)
-CreateImageButton(H, 0, [['DB\Base\download_aoeii_normal.png'], ['DB\Base\download_aoeii_hover.png'], ['DB\Base\download_aoeii_click.png'], ['DB\Base\download_aoeii_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(H, 0, [['DB\Base\download_aoeii_normal.png'], ['DB\Base\download_aoeii_hover.png'], ['DB\Base\download_aoeii_click.png'], ['DB\Base\download_aoeii_disable.png', , 0xCCCCCC]]*)
 H := AoEIIAIO.AddButton('xm w410', 'Delete the game')
 H.OnEvent('Click', DeleteGame)
-CreateImageButton(H, 0, [['DB\Base\delete_aoeii_normal.png',, 0xFF0000], ['DB\Base\delete_aoeii_hover.png',, 0xFF0000], ['DB\Base\delete_aoeii_click.png',, 0xFF0000], ['DB\Base\delete_aoeii_disable.png',, 0xCCCCCC]]*)
+CreateImageButton(H, 0, [['DB\Base\delete_aoeii_normal.png', , 0xFF0000], ['DB\Base\delete_aoeii_hover.png', , 0xFF0000], ['DB\Base\delete_aoeii_click.png', , 0xFF0000], ['DB\Base\delete_aoeii_disable.png', , 0xCCCCCC]]*)
 DeskShort := AoEIIAIO.AddCheckbox(, 'Notify to add the game desktop shortcuts')
 DeskShort.OnEvent('Click', GameShortcuts)
 PBT := AoEIIAIO.AddText('Center w410 Hidden cBlue')
@@ -100,7 +100,7 @@ SetDirectoryGR(Ctrl, Info) {
         }
         Run(GRApp)
         WinActivate('ahk_exe GameRanger.exe')
-        If !WinWaitActive('ahk_exe GameRanger.exe',, 5) {
+        If !WinWaitActive('ahk_exe GameRanger.exe', , 5) {
             MsgBox('Unable to get the GameRanger window!', 'Invalid', 0x30)
             Ctrl.Enabled := True
             Return False
@@ -108,7 +108,7 @@ SetDirectoryGR(Ctrl, Info) {
         Sleep(500)
         SendInput('^e')
         Sleep(500)
-        If !WinWaitActive('Options ahk_exe GameRanger.exe',, 5) {
+        If !WinWaitActive('Options ahk_exe GameRanger.exe', , 5) {
             MsgBox('Unable to get the GameRanger option window!', 'Invalid', 0x30)
             Ctrl.Enabled := True
             Return False
@@ -119,7 +119,7 @@ SetDirectoryGR(Ctrl, Info) {
         SendInput('{Down ' Row '}')
         WinGetPos(&X, &Y, &W, &H, 'Options ahk_exe GameRanger.exe')
         MouseClick('Left', W - 115, H - 65)
-        If !WinWaitActive('Choose ahk_exe GameRanger.exe',, 5) {
+        If !WinWaitActive('Choose ahk_exe GameRanger.exe', , 5) {
             MsgBox('Unable to get the GameRanger selection window!', 'Invalid', 0x30)
             Ctrl.Enabled := True
             Return False
@@ -130,12 +130,12 @@ SetDirectoryGR(Ctrl, Info) {
         WinClose('Options ahk_exe GameRanger.exe')
         Return True
     }
-    If !MacroSelect('empires2.exe', 12) 
-    || !MacroSelect('age2_x1\age2_x1.exe', 14) 
-    || !MacroSelect('age2_x1\age2_x2.exe', 11) {
-        MsgBox('No game was found!', 'Invalid', 0x30)
-        Ctrl.Enabled := True
-        Return False
+    If !MacroSelect('empires2.exe', 12)
+        || !MacroSelect('age2_x1\age2_x1.exe', 14)
+        || !MacroSelect('age2_x1\age2_x2.exe', 11) {
+            MsgBox('No game was found!', 'Invalid', 0x30)
+            Ctrl.Enabled := True
+            Return False
     }
     MsgBox('Game selected successfully!`n`nNow GameRanger must restart to unlock the game excutables`nRestarting in 5 seconds...', 'Game select', 0x40 ' T5')
     ProcessClose('GameRanger.exe')
@@ -221,7 +221,7 @@ DownloadGame(Ctrl, Info) {
         MsgBox('Make sure you are connected to the internet!', "Can't download!", 0x30)
         Return
     }
-    If (SGameDirectory := FileSelect('D',, 'Game install location')) && 'Yes' = MsgBox('Are you sure want to install at this location?`n' SGameDirectory, 'Game install location', 0x40 + 0x4) {
+    If (SGameDirectory := FileSelect('D', , 'Game install location')) && 'Yes' = MsgBox('Are you sure want to install at this location?`n' SGameDirectory, 'Game install location', 0x40 + 0x4) {
         SGameDirectory := RegExReplace(SGameDirectory, "\\$")
         SGameDirectory := SGameDirectory '\Age of Empires II'
         If !DirExist(SGameDirectory) {
@@ -230,7 +230,7 @@ DownloadGame(Ctrl, Info) {
         If ValidGameDirectory(SGameDirectory) && 'Yes' != MsgBox('It seems like the game already installed at this location!`nWant continue?', 'Game location install', 0x30 + 0x4) {
             Return
         }
-        
+
         Ctrl.Enabled := False
         PB.Value := 0
         PB.Opt('Range0-' Game.Length / 2 + 3)
@@ -246,17 +246,17 @@ DownloadGame(Ctrl, Info) {
             If !FileExist(Package)
                 DownloadPackage(Link, Package)
         }
-        
+
         PBT.Value := 'Exporting The Age of Kings'
-        ExtractPackage('DB\003.7z.001', SGameDirectory,, 1, 1)
+        ExtractPackage('DB\003.7z.001', SGameDirectory, , 1, 1)
         PB.Value += 1
-        
+
         PBT.Value := 'Exporting The Conquerors'
-        ExtractPackage('DB\004.7z.001', SGameDirectory,, 1, 1)
+        ExtractPackage('DB\004.7z.001', SGameDirectory, , 1, 1)
         PB.Value += 1
-        
+
         PBT.Value := 'Exporting Forgotten Empires'
-        ExtractPackage('DB\005.7z.001', SGameDirectory,, 1, 1)
+        ExtractPackage('DB\005.7z.001', SGameDirectory, , 1, 1)
         PB.Value += 1
 
         UpdateGameReg(SGameDirectory)
@@ -300,7 +300,7 @@ BinGrabText(Filepath) {
 TextGrabPath(TextFound, Excutables) {
     ResultMap := Map()
     For Each, Excutable in Excutables {
-        P := InStr(TextFound, LFE := Excutable,, -1)
+        P := InStr(TextFound, LFE := Excutable, , -1)
         Loop {
             Char := SubStr(TextFound, P - (I := A_Index), 1)
             LFE := Char LFE

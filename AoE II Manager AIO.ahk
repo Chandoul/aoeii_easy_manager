@@ -69,125 +69,91 @@ Check4Updates(Ctrl, Info) {
     }
 }
 
+LnchMap := Map()
+LnchPID := Map()
+
 AoEIIAIO.SetFont('Bold s10')
 H := AoEIIAIO.AddButton('xm y310 w150', 'My Game')
+LnchMap['My Game'] := 'Game.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchGame)
-LaunchGame(Ctrl, Info) {
-    Try Run('Game.ahk')
+H.OnEvent('Click', LaunchSubApp)
+
+LaunchSubApp(Ctrl, Info) {
+    Try {
+        Run(LnchMap[Ctrl.Text],,, &PID)
+        LnchPID[LnchMap[Ctrl.Text]] := PID
+    }
     Catch Error As Err
         MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Game', 0x10)
 }
 
 H := AoEIIAIO.AddButton('yp wp', 'Version')
+LnchMap['Version'] := 'Version.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchVersion)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchVersion(Ctrl, Info) {
-    Try Run('Version.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Version', 0x10)
-
-}
 
 H := AoEIIAIO.AddButton('yp wp', 'Patch/Fix')
+LnchMap['Patch/Fix'] := 'Fixs.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchFixes)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchFixes(Ctrl, Info) {
-    Try Run('Fixs.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Fix', 0x10)
-
-}
 
 H := AoEIIAIO.AddButton('yp wp', 'Language')
+LnchMap['Language'] := 'Language.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchLanguage)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchLanguage(Ctrl, Info) {
-    Try Run('Language.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Language', 0x10)
-
-}
 
 H := AoEIIAIO.AddButton('yp wp', 'Visual Mods')
+LnchMap['Visual Mods'] := 'VM.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchVM)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchVM(Ctrl, Info) {
-    Try Run('VM.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Visual Mod', 0x10)
-
-}
 
 H := AoEIIAIO.AddButton('yp wp', 'Data Mods')
+LnchMap['Data Mods'] := 'DM.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchDM)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchDM(Ctrl, Info) {
-    Try Run('DM.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'Data Mod', 0x10)
-
-}
 
 H := AoEIIAIO.AddButton('xm y350 wp', 'Hide All IP')
+LnchMap['Hide All IP'] := 'VPN.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchVPN)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchVPN(Ctrl, Info) {
-    Try Run('VPN.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'VPN', 0x10)
-
-}
 
 H := AoEIIAIO.AddButton('yp wp', 'Shortcuts')
+LnchMap['Shortcuts'] := 'AHK.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchAHK)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchAHK(Ctrl, Info) {
-    Try Run('AHK.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'AutoHotkey', 0x10)
-
-}
 
 H := AoEIIAIO.AddButton('yp wp', 'Direct Draw Fix')
+LnchMap['Direct Draw Fix'] := 'DDF.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchDDF)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchDDF(Ctrl, Info) {
-    Try Run('DDF.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'DirectDraw', 0x10)
-
-}
 
 H := AoEIIAIO.AddButton('yp wp+160', 'GameRanger Account Switcher')
+LnchMap['GameRanger Account Switcher'] := 'GRAS.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchGRAS)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchGRAS(Ctrl, Info) {
-    Try Run('GRAS.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'DirectDraw', 0x10)
-
-}
 
 H := AoEIIAIO.AddButton('yp w150', 'Scenarios')
+LnchMap['Scenarios'] := 'Scx.ahk'
 CreateImageButton(H, 0, IBBlack*)
-H.OnEvent('Click', LaunchRPG)
+H.OnEvent('Click', LaunchSubApp)
 Features['Main'].Push(H)
-LaunchRPG(Ctrl, Info) {
-    Try Run('Scx.ahk')
-    Catch Error As Err
-        MsgBox("Launch failed!`n`n" Err.Message '`n' Err.Line '`n' Err.File, 'DirectDraw', 0x10)
 
+OnExit(SubAppsClose)
+SubAppsClose(ExitReason, ExitCode) {
+    For SubApp, PID in LnchPID {
+        Try ProcessClose(PID)
+    }
 }
+
 AoEIIAIO.Show()
 R.Redraw()
 AoEIIAIO.GetPos(, , &W, &H)
@@ -197,7 +163,7 @@ U.Move(W - WU - 25, Y)
 U.Redraw()
 T.Move(0, , W)
 T.Redraw()
-P.Move((W - 510) / 2)
+P.Move((W - 605) / 2)
 P.Redraw()
 WD.Move(, , W - 16)
 WD.SetFont('Bold s10', 'Segoe UI')
@@ -255,6 +221,29 @@ Switch SubStr(A_OSVersion, 1, 3) {
     Case '6.0', '6.1':
         GE := A_WinDir '\System32\gameux.dll'
         If FileExist(GE) && 'Yes' = MsgBox('If your games are being delayed when you start them apply this hotfix otherwise skip it!', 'Gameux', 0x40 + 0x4) {
-            RunWait(A_ComSpec ' /c takeown /f ' A_WinDir '\System32\gameux.dll && cacls ' A_WinDir '\System32\gameux.dll /E /P %username%:F && ren ' A_WinDir '\System32\gameux.dll gameux_renamed.dll',, 'Hide')
+            RunWait(A_ComSpec ' /c takeown /f ' A_WinDir '\System32\gameux.dll && cacls ' A_WinDir '\System32\gameux.dll /E /P %username%:F && ren ' A_WinDir '\System32\gameux.dll gameux_renamed.dll', , 'Hide')
         }
+}
+
+; Watch rooms version and change when needed when is possible
+SetTimer(WatchGameVersion, 1000)
+
+WatchGameVersion() {
+    ; Version watch
+    Static Version := '' , LastApplied := ''
+    If Hwnd := WinActive('Room: Age of Empires II') {
+        If !ControlGetEnabled('RichEdit20W2', 'ahk_id ' Hwnd) {
+            Return
+        }
+        Description := StrSplit(ControlGetText('RichEdit20W1', 'ahk_id ' Hwnd), '`n')
+        For Line in Description {
+            If RegExMatch(Line, 'Description:.*(\d[\.\,]\d[a-e]?)', &OutputVar) {
+                Version := StrReplace(OutputVar.1, ',', '.')
+            }
+        }
+        If LastApplied != Version {
+            RunWait('Version.ahk ' Version)
+            LastApplied := Version
+        }
+    }
 }

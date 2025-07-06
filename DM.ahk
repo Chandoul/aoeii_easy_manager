@@ -202,11 +202,12 @@ UpdateDM(Ctrl, Info) {
     }
     Try {
         If Apply {
+            EnableControls(Features['DM'], 0)
             If !GetConnectedState() || !DownloadPackages(DMPackage[DMName]['Package']) {
                 MsgBox('Unable to install, you either not connected to the internet or a corrupted file was found!', 'Install error!', 0x30)
+                EnableControls(Features['DM'], 1)
                 Return
             }
-            EnableControls(Features['DM'], 0)
             DMBackup(GameDirectory)
             FirstPart := DMPackage[DMName]['Package'][2]
             If FileExist(FirstPart)
@@ -221,12 +222,13 @@ UpdateDM(Ctrl, Info) {
             DMBackup(GameDirectory,,, 1)
             MsgBox(DMName ' - should be uninstalled by now!', 'Data mod', 0x40)
         }
-    } Catch {
+    } Catch As Err {
         If !LockCheck(GameDirectory) {
             EnableControls(Features['DM'])
             MsgBox('Error occured while trying to install ' DMName, 'Error!', 0x10)
             Return
         }
+        Msgbox Err.Message
         UpdateDM(Ctrl, Info)
     }
     EnableControls(Features['DM'])

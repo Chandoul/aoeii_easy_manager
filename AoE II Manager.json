@@ -1,6 +1,6 @@
 {
 	"Theme": "Default",
-	"Version": "3.7",
+	"Version": "3.8",
 	"Latest": [
 		"https://raw.githubusercontent.com/Chandoul/aoeii_easy_manager/main/AoE%20II%20Manager.json",
 		"https://github.com/Chandoul/aoeii_easy_manager/raw/refs/heads/main/Bin/AoE%20II%20Manager%20AIO.exe"
@@ -65,7 +65,8 @@
 			"Fix v2",
 			"Fix v3",
 			"Fix v4",
-			"Fix v5"
+			"Fix v5",
+			"Fix v6"
 		],
 		"FIXCode": {
 			"None": -1,
@@ -73,7 +74,8 @@
 			"Fix v2": 2,
 			"Fix v3": 3,
 			"Fix v4": 4,
-			"Fix v5": 5
+			"Fix v5": 5,
+			"Fix v6": 6
 		},
 		"FIXHandle": {}
 	},

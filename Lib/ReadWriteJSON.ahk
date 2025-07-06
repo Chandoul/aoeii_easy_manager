@@ -1,9 +1,9 @@
 #Include <Json>
-ReadSetting(JSONFile := 'AoE II Manager.json', SettingName := '', ErrorCatch := Map()) {
+ReadSetting(JSONFile := 'AoE II Manager.json', SettingName := '', DefaultValue := Map()) {
     Try Return SettingName != '' ? JSON.Load(FileRead(JSONFile))[SettingName] 
                                  : JSON.Load(FileRead(JSONFile))
     Catch 
-        Return ErrorCatch
+        Return DefaultValue
 }
 WriteSetting(JSONFile := 'AoE II Manager.json', SettingName := '', Value := '') {
     Try {

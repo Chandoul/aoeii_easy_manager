@@ -164,7 +164,7 @@ ApplyFix(Ctrl, Info) {
         }
         If VersionExist('aoc', '1.0e', GameDirectory)
             || VersionExist('aoc', '1.1', GameDirectory) {
-                Msgbox('Sorry to inform you that ' Ctrl.Text ' does not apply on the current version your game is running! (1.0e, 1.5)', 'Incompatible!', 0x30)
+                Msgbox('Sorry to inform you that ' Ctrl.Text ' does not apply on the current version your game is running! (1.0e, 1.1)', 'Incompatible!', 0x30)
                 Return
         }
         EnableControls(Features['Fixs'], 0)
@@ -172,17 +172,13 @@ ApplyFix(Ctrl, Info) {
         CleansUp()
         DirCopy('DB\Fix\' Ctrl.Text, GameDirectory, 1)
         EnableControls(Features['Fixs'])
-        AnalyzeFix()
-        If FileExist(GameDirectory '\ddraw.dll') {
-            If FileExist(GameDirectory '\windmode.dll')
-                FileDelete(GameDirectory '\windmode.dll')
-            If FileExist(GameDirectory '\age2_x1\windmode.dll')
-                FileDelete(GameDirectory '\age2_x1\windmode.dll')
-			If FileExist(GameDirectory '\wndmode.dll')
-                FileDelete(GameDirectory '\wndmode.dll')
-            If FileExist(GameDirectory '\age2_x1\wndmode.dll')
-                FileDelete(GameDirectory '\age2_x1\wndmode.dll')
+        If FileExist(GameDirectory '\age2_x1\ddraw.dll') {
+            FileDelete(GameDirectory '\age2_x1\ddraw.dll')
         }
+        If FileExist(GameDirectory '\ddraw.dll') {
+            FileDelete(GameDirectory '\ddraw.dll')
+        }
+        AnalyzeFix()
         SoundPlay('DB\Base\30 Wololo.mp3')
     } Catch {
         If !LockCheck(GameDirectory) {
