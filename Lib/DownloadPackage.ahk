@@ -60,7 +60,8 @@ GetFileSize(Link) {
 DownloadGui() {
     Static DG := 0
     If !DG {
-        DG := Gui('-SysMenu', 'EM Downloader')
+        DG := Gui(, 'EM Downloader')
+        DG.OnEvent('Close', (*) => ExitApp())
         DG.BackColor := 'White'
         DG.SetFont('s10', 'Segoe UI')
         PT := DG.AddEdit('w300 Center ReadOnly -E0X200 BackgroundWhite vPT')
